@@ -162,6 +162,7 @@ input::placeholder {
     padding: 0 24px 24px;
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .list-item {
@@ -197,6 +198,9 @@ input::placeholder {
     flex: 1;
     font-size: 17px;
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .item-name.completed {
@@ -504,6 +508,7 @@ input::placeholder {
 .offers-scroll-area {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 8px 24px 24px;
 }
 
