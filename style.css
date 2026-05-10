@@ -423,11 +423,30 @@ input::placeholder {
 }
 
 /* Views Containers */
-#list-view, #offers-view {
+#list-view, #offers-view, #volantini-view {
     display: flex;
     flex-direction: column;
     flex: 1;
     overflow: hidden;
+}
+
+.flyer-btn {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+}
+
+.flyer-btn:active {
+    transform: scale(0.95);
+    background: var(--accent-hover);
 }
 
 

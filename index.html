@@ -31,6 +31,7 @@
         <div class="view-toggles">
             <button id="view-list-btn" class="toggle-btn active">🛍️ Lista</button>
             <button id="view-offers-btn" class="toggle-btn">🏷️ Offerte</button>
+            <button id="view-flyers-btn" class="toggle-btn">📄 Volantini</button>
         </div>
 
         <div id="list-view">
@@ -89,7 +90,17 @@
                     </ul>
                 </div>
             </div>
+        <div id="volantini-view" class="hidden">
+            <div class="offers-header">
+                <div class="offers-validity">Sfoglia i volantini ufficiali</div>
+            </div>
+            <div class="offers-scroll-area">
+                <ul id="flyers-list" class="offers-list-inner">
+                    <!-- Volantini will be generated here -->
+                </ul>
+            </div>
         </div>
+
     </div>
     <!-- iOS Install Modal -->
     <div id="ios-install-modal" class="modal-backdrop hidden">

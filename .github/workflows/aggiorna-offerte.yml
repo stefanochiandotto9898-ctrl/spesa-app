@@ -32,12 +32,18 @@ jobs:
         with:
           node-version: '20'
 
-      # 3. Installa dipendenze scraper
-      - name: 📦 Installa dipendenze (Puppeteer)
+      # 3. Installa dipendenze sistema (Ubuntu)
+      - name: 📦 Installa dipendenze sistema per Puppeteer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgbm-dev libnss3 libatk-bridge2.0-0 libgtk-3-0 libasound2
+
+      # 4. Installa dipendenze scraper (Node)
+      - name: 📦 Installa dipendenze Node.js
         working-directory: scraper
         run: npm install
 
-      # 4. Esegui lo scraper
+      # 5. Esegui lo scraper
       - name: 🔍 Esegui scraper offerte
         working-directory: scraper
         run: node index.js

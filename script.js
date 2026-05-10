@@ -551,24 +551,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const offersRefreshBtn = document.getElementById('offers-refresh-btn');
     const allOffersTitle = document.getElementById('all-offers-title');
 
+    const viewFlyersBtn = document.getElementById('view-flyers-btn');
+    const volantiniView = document.getElementById('volantini-view');
+    const flyersList = document.getElementById('flyers-list');
+
     let allOffersData = [];
     let offersLoaded = false;
     let activeMarketFilter = 'all';
 
-    if (viewListBtn && viewOffersBtn) {
+    if (viewListBtn && viewOffersBtn && viewFlyersBtn) {
         viewListBtn.addEventListener('click', () => {
             viewListBtn.classList.add('active');
             viewOffersBtn.classList.remove('active');
+            viewFlyersBtn.classList.remove('active');
             listView.classList.remove('hidden');
             offersView.classList.add('hidden');
+            volantiniView.classList.add('hidden');
         });
 
         viewOffersBtn.addEventListener('click', () => {
             viewOffersBtn.classList.add('active');
             viewListBtn.classList.remove('active');
+            viewFlyersBtn.classList.remove('active');
             offersView.classList.remove('hidden');
             listView.classList.add('hidden');
+            volantiniView.classList.add('hidden');
             if (!offersLoaded) loadOffers();
+        });
+
+        viewFlyersBtn.addEventListener('click', () => {
+            viewFlyersBtn.classList.add('active');
+            viewListBtn.classList.remove('active');
+            viewOffersBtn.classList.remove('active');
+            volantiniView.classList.remove('hidden');
+            listView.classList.add('hidden');
+            offersView.classList.add('hidden');
+            renderFlyers();
         });
     }
 
@@ -698,6 +716,33 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             rest.forEach(o => offersList.appendChild(createOfferCard(o, false)));
         }
+    }
+
+    function renderFlyers() {
+        if (!flyersList) return;
+        flyersList.innerHTML = '';
+        
+        const flyers = [
+            { name: "Visotto", icon: "🛒", url: "https://www.visotto.it/volantini" },
+            { name: "Lidl", icon: "🍋", url: "https://www.promoqui.it/volantino/lidl" },
+            { name: "Despar", icon: "🌲", url: "https://www.promoqui.it/volantino/despar" },
+            { name: "Dpiù", icon: "🍊", url: "https://www.promoqui.it/volantino/dpiu" },
+            { name: "Conad", icon: "🍓", url: "https://www.promoqui.it/volantino/conad" }
+        ];
+
+        flyers.forEach(f => {
+            const li = document.createElement('li');
+            li.className = 'offer-item';
+            li.innerHTML = `
+                <div class="offer-icon-wrap">${f.icon}</div>
+                <div class="offer-info">
+                    <div class="offer-product">${f.name}</div>
+                    <div class="offer-location">Volantino della settimana</div>
+                </div>
+                <a href="${f.url}" target="_blank" class="flyer-btn">Apri PDF</a>
+            `;
+            flyersList.appendChild(li);
+        });
     }
 
     async function loadOffers() {
