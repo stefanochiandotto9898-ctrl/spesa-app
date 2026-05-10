@@ -723,11 +723,11 @@ document.addEventListener('DOMContentLoaded', () => {
         flyersList.innerHTML = '';
         
         const flyers = [
-            { name: "Visotto", icon: "🛒", url: "https://www.visotto.it/volantini" },
-            { name: "Lidl", icon: "🍋", url: "https://www.promoqui.it/volantino/lidl" },
-            { name: "Despar", icon: "🌲", url: "https://www.promoqui.it/volantino/despar" },
-            { name: "Dpiù", icon: "🍊", url: "https://www.promoqui.it/volantino/dpiu" },
-            { name: "Conad", icon: "🍓", url: "https://www.promoqui.it/volantino/conad" }
+            { name: "IperVisotto (Portogruaro)", icon: "🛒", url: "https://www.supermercativisotto.it/sites/default/files/promozioni/volantini/VOL.N09_SUPERIPER%20VISOTTO_VOLANTINO%20DAL%206%20AL%2019%20MAGGIO%202026.pdf" },
+            { name: "Lidl (Portogruaro)", icon: "🍋", url: "https://www.lidl.it/c/volantino-online/s10022792" },
+            { name: "Despar (Concordia)", icon: "🌲", url: "https://www.despar.it/it/volantini/" },
+            { name: "Dpiù (Fossalta)", icon: "🍊", url: "https://www.promoqui.it/volantino/dpiu" },
+            { name: "Conad (Portogruaro)", icon: "🍓", url: "https://www.conad.it/ricerca-negozi/negozio.005118.html" }
         ];
 
         flyers.forEach(f => {

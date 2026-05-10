@@ -36,14 +36,18 @@ jobs:
       - name: 📦 Installa dipendenze sistema per Puppeteer
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgbm-dev libnss3 libatk-bridge2.0-0 libgtk-3-0 libasound2
+          sudo apt-get install -y libgbm-dev libnss3 libatk-bridge2.0-0 libgtk-3-0 libasound2 libxdamage1 libxkbcommon0 libpango-1.0-0 libcairo2
 
-      # 4. Installa dipendenze scraper (Node)
+      # 4. Installa Chrome
+      - name: 🌐 Installa Chrome
+        run: npx puppeteer browsers install chrome
+
+      # 5. Installa dipendenze scraper (Node)
       - name: 📦 Installa dipendenze Node.js
         working-directory: scraper
         run: npm install
 
-      # 5. Esegui lo scraper
+      # 6. Esegui lo scraper
       - name: 🔍 Esegui scraper offerte
         working-directory: scraper
         run: node index.js
