@@ -1,0 +1,16 @@
+{
+  "name": "spesa-scraper",
+  "version": "2.0.0",
+  "description": "Scraper automatico offerte supermercati - Portogruaro/Concordia Sagittaria",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node index.js --dry-run"
+  },
+  "dependencies": {
+    "puppeteer": "^22.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

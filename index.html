@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Spesa">
+    <title>La Mia Spesa</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h1>Spesa</h1>
+                    <p>Lista intelligente</p>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
+                    <button id="pwa-install-btn" class="pwa-btn hidden">Scarica App</button>
+                    <button id="pwa-notify-btn" class="pwa-btn hidden">🔔 Notifiche</button>
+                    <div id="connection-status" title="Connessione in corso..." style="width: 12px; height: 12px; border-radius: 50%; background-color: #ffcc00;"></div>
+                </div>
+            </div>
+        </header>
+
+        <div class="view-toggles">
+            <button id="view-list-btn" class="toggle-btn active">🛍️ Lista</button>
+            <button id="view-offers-btn" class="toggle-btn">🏷️ Offerte</button>
+        </div>
+
+        <div id="list-view">
+            <div class="input-section">
+            <div class="input-wrapper">
+                <input type="text" id="food-input" placeholder="Cosa ti serve?" autocomplete="off">
+                <button id="add-btn" class="add-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+            <ul id="suggestions" class="suggestions-list hidden"></ul>
+        </div>
+
+        <ul id="shopping-list" class="shopping-list">
+            <!-- Items will be generated qui -->
+        </ul>
+        
+        <div class="total-section">
+            <div class="total-label">Totale Stimato</div>
+            <div class="total-amount" id="total-amount">0.00 €</div>
+        </div>
+        </div> <!-- chiusura list-view -->
+
+        <div id="offers-view" class="hidden">
+            <!-- Offerte Header -->
+            <div class="offers-header">
+                <div class="offers-validity" id="offers-validity">Caricamento...</div>
+                <button id="offers-refresh-btn" class="offers-refresh-btn" title="Aggiorna offerte">↻</button>
+            </div>
+
+            <!-- Filtri supermercato -->
+            <div class="offers-filters" id="offers-filters">
+                <button class="filter-chip active" data-market="all">Tutti</button>
+                <button class="filter-chip" data-market="visotto">Visotto</button>
+                <button class="filter-chip" data-market="lidl">Lidl</button>
+                <button class="filter-chip" data-market="despar">Despar</button>
+                <button class="filter-chip" data-market="dpiu">Dpiù</button>
+                <button class="filter-chip" data-market="conad">Conad</button>
+            </div>
+
+            <!-- Lista offerte scrollabile -->
+            <div class="offers-scroll-area">
+                <!-- Sezione Consigliate -->
+                <div id="personalized-section" class="offers-section hidden">
+                    <div class="offers-section-title">⭐ Consigliate per te</div>
+                    <ul id="personalized-list" class="offers-list-inner"></ul>
+                </div>
+
+                <!-- Tutte le offerte -->
+                <div class="offers-section">
+                    <div class="offers-section-title" id="all-offers-title">📋 Tutte le Offerte</div>
+                    <ul id="offers-list" class="offers-list-inner">
+                        <!-- Offers will be generated here -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- iOS Install Modal -->
+    <div id="ios-install-modal" class="modal-backdrop hidden">
+        <div class="ios-modal-content">
+            <h3>Installa l'App su iPhone</h3>
+            <p style="margin: 10px 0; color: var(--text-secondary); font-size: 15px;">Per usare l'app offline e ricevere le notifiche in tempo reale:</p>
+            <ol style="text-align: left; margin: 20px 0 20px 20px; line-height: 1.6;">
+                <li>Tocca l'icona Condividi <svg style="display:inline; vertical-align:middle; color: var(--accent-color);" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> in basso nel browser</li>
+                <li>Scorri in giù e tocca <strong>Aggiungi alla schermata Home <svg style="display:inline; vertical-align:middle;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></strong></li>
+            </ol>
+            <button id="close-ios-modal" class="modal-close-btn">Ho capito</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
