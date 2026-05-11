@@ -1,0 +1,15 @@
+{
+    "flyers": [
+        {
+            "name": "IperVisotto (Portogruaro)",
+            "url": "https://supermercativisotto.it/volantino",
+            "icon": "🛒"
+        },
+        {
+            "name": "Lidl (Portogruaro)",
+            "url": "https://www.lidl.it/c/volantino-online/s10022792",
+            "icon": "🍋"
+        }
+    ],
+    "updated": "2026-05-11T19:11:00"
+}

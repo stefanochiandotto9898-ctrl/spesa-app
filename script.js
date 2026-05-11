@@ -718,31 +718,49 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderFlyers() {
+    async function renderFlyers() {
         if (!flyersList) return;
-        flyersList.innerHTML = '';
         
-        const flyers = [
-            { name: "IperVisotto (Portogruaro)", icon: "🛒", url: "https://www.supermercativisotto.it/sites/default/files/promozioni/volantini/VOL.N09_SUPERIPER%20VISOTTO_VOLANTINO%20DAL%206%20AL%2019%20MAGGIO%202026.pdf" },
-            { name: "Lidl (Portogruaro)", icon: "🍋", url: "https://www.lidl.it/c/volantino-online/s10022792" },
-            { name: "Despar (Concordia)", icon: "🌲", url: "https://www.despar.it/it/volantini/" },
-            { name: "Dpiù (Fossalta)", icon: "🍊", url: "https://www.promoqui.it/volantino/dpiu" },
-            { name: "Conad (Portogruaro)", icon: "🍓", url: "https://www.conad.it/ricerca-negozi/negozio.005118.html" }
-        ];
+        flyersList.innerHTML = `
+            <div class="offers-empty-state">
+                <div class="empty-icon">⏳</div>
+                <p>Caricamento volantini...</p>
+            </div>`;
+            
+        try {
+            const res = await fetch('volantini.json?t=' + new Date().getTime());
+            if (!res.ok) throw new Error("File non trovato");
+            const data = await res.json();
+            const flyers = data.flyers || [];
+            
+            flyersList.innerHTML = '';
+            if (flyers.length === 0) {
+                flyersList.innerHTML = `<div class="offers-empty-state"><p>Nessun volantino disponibile.</p></div>`;
+                return;
+            }
 
-        flyers.forEach(f => {
-            const li = document.createElement('li');
-            li.className = 'offer-item';
-            li.innerHTML = `
-                <div class="offer-icon-wrap">${f.icon}</div>
-                <div class="offer-info">
-                    <div class="offer-product">${f.name}</div>
-                    <div class="offer-location">Volantino della settimana</div>
-                </div>
-                <a href="${f.url}" target="_blank" class="flyer-btn">Apri PDF</a>
-            `;
-            flyersList.appendChild(li);
-        });
+            flyers.forEach(f => {
+                const li = document.createElement('li');
+                li.className = 'offer-item';
+                li.innerHTML = `
+                    <div class="offer-icon-wrap">${f.icon || '📄'}</div>
+                    <div class="offer-info">
+                        <div class="offer-product">${f.name}</div>
+                        <div class="offer-location">Volantino della settimana</div>
+                    </div>
+                    <a href="${f.url}" target="_blank" class="flyer-btn">Apri</a>
+                `;
+                flyersList.appendChild(li);
+            });
+        } catch (e) {
+            console.log('Error loading flyers:', e);
+            // Fallback o messaggio di errore
+            flyersList.innerHTML = `
+                <div class="offers-empty-state">
+                    <div class="empty-icon">⚠️</div>
+                    <p>I volantini vengono aggiornati ogni martedì.<br>Controlla più tardi!</p>
+                </div>`;
+        }
     }
 
     async function loadOffers() {
