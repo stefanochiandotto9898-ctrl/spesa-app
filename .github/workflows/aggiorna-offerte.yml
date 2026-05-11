@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     
     steps:
       # 1. Checkout del codice
@@ -58,7 +60,8 @@ jobs:
       - name: 📦 Installa dipendenze Python
         run: |
           pip install playwright requests
-          python3 -m playwright install --with-deps chromium
+          sudo python3 -m playwright install-deps
+          python3 -m playwright install chromium
 
       # 7. Esegui gli scraper
       - name: 🔍 Esegui scraper offerte (Node)
