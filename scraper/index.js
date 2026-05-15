@@ -120,34 +120,26 @@ function isRelevant(name) {
     return KEYWORDS.some(k => n.includes(k));
 }
 
-// Scrapa un singolo supermercato su Promoqui
 async function scrapeSupermarket(browser, market) {
     console.log(`\n🔍 Scraping ${market.name} (${market.location})...`);
     const page = await browser.newPage();
     const offers = [];
 
     try {
-        await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1');
-        await page.goto(market.url, { waitUntil: 'networkidle2', timeout: 30000 });
+        // User-Agent aggiornato per sembrare un browser reale
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+        await page.goto(market.url, { waitUntil: 'networkidle2', timeout: 45000 });
 
-        // Attendi che le offerte vengano caricate
-        await page.waitForSelector('.css-6i29zs, [class*="product"], [class*="offer"], [class*="price"]', {
-            timeout: 10000
-        }).catch(() => console.log(`  ⚠️  Nessun selettore trovato per ${market.name}`));
-
-        // Estrai i testi delle offerte dalla pagina
         const rawOffers = await page.evaluate(() => {
             const results = [];
-            // Cerca tutti i link delle offerte su Promoqui
             document.querySelectorAll('a[href*="#p="]').forEach(link => {
                 const text = link.textContent.trim();
-                // Estrai prezzo dal testo
-                const priceMatch = text.match(/(\d+[.,]\d{2})\s*€/);
-                if (priceMatch && text.length > 5) {
+                // Regex corretta per prezzi come "2€", "1,50€" o "1.99€"
+                const priceMatch = text.match(/(\d+([.,]\d{1,2})?)\s*€/);
+                if (priceMatch && text.length > 3) {
                     const price = parseFloat(priceMatch[1].replace(',', '.'));
-                    // Il nome è il testo senza il prezzo e i tag CSS
                     const name = text.replace(/[\d.,]+€.*/, '').replace(/-\d+%/, '').trim();
-                    if (name.length > 3) {
+                    if (name.length > 2) {
                         results.push({ name, price });
                     }
                 }
