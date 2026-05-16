@@ -56,23 +56,9 @@ if %errorlevel% equ 0 (
     echo.
     echo ✅ Offerte aggiornate con successo!
     
-    :: Prova a deployare su Netlify (se installato)
-    where netlify >nul 2>&1
-    if %errorlevel% equ 0 (
-        echo.
-        echo 🚀 Deploy automatico su Netlify in corso...
-        cd ..
-        netlify deploy --prod --dir . --message "Aggiornamento offerte %DATE%"
-        if %errorlevel% equ 0 (
-            echo ✅ Sito aggiornato su Netlify!
-        ) else (
-            echo ⚠️  Deploy Netlify fallito. Trascina manualmente la cartella su netlify.com
-        )
-    ) else (
-        echo.
-        echo ℹ️  Netlify CLI non configurato.
-        echo    Trascina la cartella spesa-app su app.netlify.com per pubblicare.
-    )
+    echo.
+    echo 🚀 Le offerte sono pronte per essere pushate su GitHub!
+    echo    Usa: git add . ^& git commit -m "Aggiorna offerte" ^& git push
 ) else (
     echo.
     echo ❌ Errore nello scraper. Controlla la connessione internet.

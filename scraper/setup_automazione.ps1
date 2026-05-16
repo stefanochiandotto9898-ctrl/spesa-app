@@ -108,30 +108,11 @@ try {
 }
 
 # ─────────────────────────────────────────────────────────────
-# STEP 3: Netlify CLI (opzionale - per deploy automatico)
+# STEP 3: Configurazione GitHub (Suggerimento)
 # ─────────────────────────────────────────────────────────────
-Write-Step 3 "Configurazione Netlify CLI (deploy automatico)..."
-
-$hasNetlify = Get-Command netlify -ErrorAction SilentlyContinue
-if (-not $hasNetlify) {
-    Write-Host "    → Installazione Netlify CLI..." -ForegroundColor Gray
-    try {
-        & "$NpmPath" install -g netlify-cli --quiet 2>&1 | Out-Null
-        Write-OK "Netlify CLI installato."
-        Write-Host ""
-        Write-Host "    📌 IMPORTANTE: Devi collegare il progetto a Netlify una volta:" -ForegroundColor Yellow
-        Write-Host "       1. Apri PowerShell nella cartella: $AppDir" -ForegroundColor White
-        Write-Host "       2. Digita: netlify login" -ForegroundColor White
-        Write-Host "       3. Poi: netlify link" -ForegroundColor White
-        Write-Host "       4. Seleziona il tuo sito Spesa App" -ForegroundColor White
-        Write-Host ""
-        Read-Host "    Premi INVIO per continuare con il Task Scheduler"
-    } catch {
-        Write-Warn "Netlify CLI non installato (opzionale). Il sito dovrà essere aggiornato manualmente."
-    }
-} else {
-    Write-OK "Netlify CLI già presente."
-}
+Write-Step 3 "Suggerimento: Configurazione GitHub..."
+Write-OK "Assicurati di aver inizializzato la cartella con 'git init' e collegato il repository GitHub."
+Write-Host "    📌 Per pubblicare: git add . ; git commit -m 'Update' ; git push" -ForegroundColor Yellow
 
 # ─────────────────────────────────────────────────────────────
 # STEP 4: Crea Task su Windows Task Scheduler
@@ -176,7 +157,7 @@ try {
         -Trigger $trigger `
         -Settings $settings `
         -Principal $principal `
-        -Description "Aggiorna le offerte dei supermercati ogni martedì e rideploya l'app su Netlify."
+        -Description "Aggiorna le offerte dei supermercati ogni martedì mattina."
     
     Write-OK "Task creato con successo!"
     Write-Host ""

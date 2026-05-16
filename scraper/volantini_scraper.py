@@ -43,19 +43,13 @@ async def scrape_visotto(browser):
     print("[Visotto] Ricerca volantino...")
     page = await browser.new_page()
     try:
-        await page.goto("https://supermercativisotto.it/volantino", wait_until="domcontentloaded")
+        await page.goto("https://supermercativisotto.it/volantino", wait_until="networkidle")
         # Accetta cookie se presente
-        try:
-            cookie_btn = await page.query_selector("button:has-text('Accetta'), .cc-accept")
-            if cookie_btn: await cookie_btn.click()
-        except:
-            pass
+        cookie_btn = await page.query_selector("button:has-text('Accetta'), .cc-accept")
+        if cookie_btn: await cookie_btn.click()
         
-        # Trova il link PDF (cerca l'estensione invece del testo)
-        pdf_link = await page.get_attribute("a[href$='.pdf']", "href")
-        if not pdf_link:
-            pdf_link = await page.get_attribute("a:has-text('SCARICA')", "href")
-            
+        # Trova il link PDF
+        pdf_link = await page.get_attribute("a:has-text('SCARICALO QUI')", "href")
         if pdf_link:
             if not pdf_link.startswith("http"):
                 pdf_link = "https://supermercativisotto.it" + pdf_link
@@ -70,28 +64,28 @@ async def scrape_lidl(browser):
     print("[Lidl] Ricerca volantino...")
     page = await browser.new_page()
     try:
-        # URL generale volantini Lidl
-        await page.goto("https://www.lidl.it/volantini", wait_until="domcontentloaded")
+        # URL specifico per Portogruaro (ID s10022792)
+        await page.goto("https://www.lidl.it/c/volantino-online/s10022792", wait_until="networkidle")
         
         # Gestione cookie
-        try:
-            cookie_btn = await page.query_selector("#onetrust-accept-btn-handler")
-            if cookie_btn: await cookie_btn.click()
-        except:
-            pass
+        cookie_btn = await page.query_selector("#onetrust-accept-btn-handler")
+        if cookie_btn: await cookie_btn.click()
         
-        # Troviamo il bottone PDF
-        pdf_link = await page.get_attribute("a[href$='.pdf']", "href")
-        if not pdf_link:
-            # A volte Lidl apre un viewer o iframe
-            iframe = await page.query_selector("iframe")
-            if iframe:
-                pdf_link = await iframe.get_attribute("src")
-        
-        if pdf_link:
-            if not pdf_link.startswith("http"):
-                pdf_link = "https://www.lidl.it" + pdf_link
-            return await download_file(pdf_link, "lidl")
+        # Spesso Lidl usa un viewer. Cerchiamo il pulsante di download o il link diretto
+        # In alternativa, cerchiamo l'elemento del volantino più a sinistra
+        flyer_card = await page.query_selector(".flyer-tile, .flyer-item")
+        if flyer_card:
+            await flyer_card.click()
+            await page.wait_for_timeout(2000)
+            
+            # Cerca il link PDF nel viewer
+            pdf_link = await page.get_attribute("a[href$='.pdf']", "href")
+            if not pdf_link:
+                # Prova a estrarre dall'attributo data o simili
+                pdf_link = await page.get_attribute("button.download-btn", "data-url")
+            
+            if pdf_link:
+                return await download_file(pdf_link, "lidl")
     except Exception as e:
         print(f"[Lidl] Errore: {e}")
     finally:
@@ -151,33 +145,27 @@ async def main():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         
+        results = []
+        
         # Esegui scraping
         visotto = await scrape_visotto(browser)
         lidl = await scrape_lidl(browser)
         conad = await scrape_conad(browser)
         dpiu = await scrape_dpiu(browser)
         
-        # Prepara dati per il JSON
+        # Prepara JSON
         flyers_data = []
         if visotto: flyers_data.append({"name": "IperVisotto (Portogruaro)", "url": f"volantini/{visotto}", "icon": "🛒"})
         if lidl: flyers_data.append({"name": "Lidl (Portogruaro)", "url": f"volantini/{lidl}", "icon": "🍋"})
         if conad: flyers_data.append({"name": "Conad (Portogruaro)", "url": f"volantini/{conad}", "icon": "🍓"})
         if dpiu: flyers_data.append({"name": "Dpiù (Portogruaro)", "url": f"volantini/{dpiu}", "icon": "🍊"})
         
-        # Verifica se abbiamo trovato almeno un volantino
-        if not flyers_data:
-            print("⚠️ Nessun volantino trovato. Uso dati di fallback temporanei per testare la UI.")
-            # Fallback for testing UI if scraping fails
-            flyers_data = [
-                {"name": "IperVisotto (Fallback)", "url": "https://supermercativisotto.it/volantino", "icon": "🛒"},
-                {"name": "Lidl (Fallback)", "url": "https://www.lidl.it/volantini", "icon": "🍋"}
-            ]
-
         # Scrivi JSON
         with open(JSON_FILE, 'w', encoding='utf-8') as f:
             json.dump({"flyers": flyers_data, "updated": datetime.now().isoformat()}, f, indent=4)
         
-        print(f"✅ Aggiornamento completato. File generato: {JSON_FILE}")
+        print(f"Aggiornamento completato. File generato: {JSON_FILE}")
+        
         await browser.close()
 
 if __name__ == "__main__":

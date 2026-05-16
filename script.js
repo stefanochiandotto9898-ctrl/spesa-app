@@ -1,4 +1,32 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // === CONFIGURAZIONE IMMAGINI PRODOTTI (Demo) ===
+    const PRODUCT_IMAGES = {
+        'pasta': 'https://it.openfoodfacts.org/images/products/800/834/320/0843/front_it.70.400.jpg',
+        'yogurt': 'https://it.openfoodfacts.org/images/products/541/118/811/0834/front_it.153.400.jpg',
+        'latte': 'https://it.openfoodfacts.org/images/products/800/162/300/4021/front_it.101.400.jpg',
+        'birra': 'https://it.openfoodfacts.org/images/products/800/689/025/1155/front_it.108.400.jpg',
+        'mozzarella': 'https://it.openfoodfacts.org/images/products/800/043/013/3591/front_it.110.400.jpg',
+        'pollo': 'https://it.openfoodfacts.org/images/products/800/111/000/0000/front_it.1.400.jpg',
+        'caffè': 'https://it.openfoodfacts.org/images/products/800/007/000/0000/front_it.1.400.jpg',
+        'vino': 'https://it.openfoodfacts.org/images/products/800/000/000/0000/front_it.1.400.jpg',
+        'passata': 'https://it.openfoodfacts.org/images/products/800/000/000/0001/front_it.1.400.jpg',
+        'acqua': 'https://it.openfoodfacts.org/images/products/800/000/000/0002/front_it.1.400.jpg',
+        'carta igienica': 'https://it.openfoodfacts.org/images/products/800/000/000/0003/front_it.1.400.jpg',
+        'detersivo': 'https://it.openfoodfacts.org/images/products/800/000/000/0004/front_it.1.400.jpg'
+    };
+
+    function getProductImage(keyword, product) {
+        const key = keyword ? keyword.toLowerCase() : '';
+        if (PRODUCT_IMAGES[key]) return PRODUCT_IMAGES[key];
+        
+        // Cerca parzialmente nel nome
+        const name = product.toLowerCase();
+        for (const [k, url] of Object.entries(PRODUCT_IMAGES)) {
+            if (name.includes(k)) return url;
+        }
+        return null;
+    }
+
     // === CONFIGURAZIONE MQTT (Sincronizzazione in tempo reale) ===
     const MQTT_TOPIC = 'spesa-app-ste-room-secret-99'; // Canale univoco per la coppia
     let mqttClient = null;
@@ -372,8 +400,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const li = document.createElement('li');
             li.className = 'list-item';
             
+            const imgUrl = getProductImage(item.keyword, item.name);
+            const iconHtml = imgUrl 
+                ? `<div class="item-icon" style="padding: 5px;"><img src="${imgUrl}" style="width:100%; height:100%; object-fit:contain;"></div>`
+                : `<div class="item-icon">${item.icon}</div>`;
+
             li.innerHTML = `
-                <div class="item-icon">${item.icon}</div>
+                ${iconHtml}
                 <div class="item-name ${item.completed ? 'completed' : ''}">${item.name}</div>
                 
                 <div class="item-price-wrapper">
@@ -382,51 +415,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 
                 <button class="check-btn ${item.completed ? 'checked' : ''}" aria-label="Segna completato"></button>
-                <button class="delete-btn" aria-label="Elimina">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
+                <button class="delete-btn" aria-label="Elimina" style="background:transparent; border:none; color: #CCC; margin-left:10px; font-size:18px;">×</button>
             `;
+
+            li.querySelector('.delete-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                shoppingList = shoppingList.filter(i => i.id !== item.id);
+                saveState();
+                renderList();
+            });
 
             // Gestione prezzo
             const priceInput = li.querySelector('.price-input');
             priceInput.addEventListener('change', (e) => {
                 const newPrice = parseFloat(e.target.value) || 0;
                 item.price = newPrice;
-                
-                // Aggiorna anche il catalogo (impara il prezzo!)
                 const catalogItem = catalog.find(c => c.name.toLowerCase() === item.name.toLowerCase());
-                if (catalogItem) {
-                    catalogItem.price = newPrice;
-                }
-                
+                if (catalogItem) catalogItem.price = newPrice;
                 saveState();
                 updateTotal();
             });
 
-            // Toggle completato (bottone)
+            // Toggle completato
             li.querySelector('.check-btn').addEventListener('click', () => {
                 item.completed = !item.completed;
                 saveState();
                 renderList();
             });
 
-            // Toggle completato (testo)
             li.querySelector('.item-name').addEventListener('click', () => {
                 item.completed = !item.completed;
-                saveState();
-                renderList();
-            });
-
-            // Elimina
-            li.querySelector('.delete-btn').addEventListener('click', () => {
-                // Modifica per la sincronizzazione sicura: al posto di rimuovere l'elemento, 
-                // in un db reale si marcherebbe "deleted". Per noi va bene toglierlo.
-                shoppingList = shoppingList.filter(i => i.id !== item.id);
-                
-                // Forziamo publish di un nuovo stato pulito
                 saveState();
                 renderList();
             });
@@ -539,81 +557,191 @@ document.addEventListener('DOMContentLoaded', () => {
         toast._timeout = setTimeout(() => toast.classList.remove('show'), 2500);
     }
 
-    // === Toggles & Volantini ===
+    // === Toggles & Offerte ===
     const viewListBtn = document.getElementById('view-list-btn');
+    const viewOffersBtn = document.getElementById('view-offers-btn');
     const listView = document.getElementById('list-view');
+    const offersView = document.getElementById('offers-view');
+    const offersList = document.getElementById('offers-list');
+    const personalizedList = document.getElementById('personalized-list');
+    const personalizedSection = document.getElementById('personalized-section');
+    const offersValidityEl = document.getElementById('offers-validity');
+    const offersRefreshBtn = document.getElementById('offers-refresh-btn');
+    const allOffersTitle = document.getElementById('all-offers-title');
 
     const viewFlyersBtn = document.getElementById('view-flyers-btn');
     const volantiniView = document.getElementById('volantini-view');
     const flyersList = document.getElementById('flyers-list');
-    const flyersRefreshBtn = document.getElementById('flyers-refresh-btn');
 
-    if (viewListBtn && viewFlyersBtn) {
+    let allOffersData = [];
+    let offersLoaded = false;
+    let activeMarketFilter = 'all';
+
+    if (viewListBtn && viewOffersBtn && viewFlyersBtn) {
         viewListBtn.addEventListener('click', () => {
             viewListBtn.classList.add('active');
+            viewOffersBtn.classList.remove('active');
             viewFlyersBtn.classList.remove('active');
             listView.classList.remove('hidden');
+            offersView.classList.add('hidden');
             volantiniView.classList.add('hidden');
+        });
+
+        viewOffersBtn.addEventListener('click', () => {
+            viewOffersBtn.classList.add('active');
+            viewListBtn.classList.remove('active');
+            viewFlyersBtn.classList.remove('active');
+            offersView.classList.remove('hidden');
+            listView.classList.add('hidden');
+            volantiniView.classList.add('hidden');
+            if (!offersLoaded) loadOffers();
         });
 
         viewFlyersBtn.addEventListener('click', () => {
             viewFlyersBtn.classList.add('active');
             viewListBtn.classList.remove('active');
+            viewOffersBtn.classList.remove('active');
             volantiniView.classList.remove('hidden');
             listView.classList.add('hidden');
+            offersView.classList.add('hidden');
             renderFlyers();
         });
     }
 
-    // Pulsante aggiorna volantini
-    flyersRefreshBtn?.addEventListener('click', async () => {
-        if (!flyersList) return;
-        
-        let token = localStorage.getItem('spesa_github_token');
-        if (!token) {
-            token = prompt("Per aggiornare i volantini, inserisci il tuo GitHub Personal Access Token:");
-            if (!token) return;
-            localStorage.setItem('spesa_github_token', token);
-        }
-
-        flyersList.innerHTML = `
-            <div class="offers-empty-state">
-                <div class="empty-icon">⏳</div>
-                <p>Avvio dell'aggiornamento...<br><small>Richiederà circa 1-2 minuti. Torna tra poco e sfoglia i nuovi volantini!</small></p>
-            </div>`;
-        showToast('Inizio aggiornamento volantini...');
-
-        try {
-            const res = await fetch('https://api.github.com/repos/stefanochiandotto9898-ctrl/spesa-app/dispatches', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    event_type: 'trigger-scraper'
-                })
-            });
-
-            if (res.ok) {
-                showToast('Aggiornamento avviato! Torna tra poco.');
-            } else if (res.status === 401 || res.status === 403) {
-                showToast('Token non valido. Riprova.');
-                localStorage.removeItem('spesa_github_token');
-                renderFlyers();
-            } else {
-                showToast('Errore avvio aggiornamento.');
-                renderFlyers();
-            }
-        } catch (e) {
-            console.error(e);
-            showToast('Errore di connessione.');
-            renderFlyers();
-        }
+    // Filtri supermercato
+    document.getElementById('offers-filters')?.addEventListener('click', (e) => {
+        const chip = e.target.closest('.filter-chip');
+        if (!chip) return;
+        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        activeMarketFilter = chip.dataset.market;
+        renderOffers(allOffersData);
     });
 
+    // Pulsante aggiorna
+    offersRefreshBtn?.addEventListener('click', () => {
+        offersLoaded = false;
+        offersList.innerHTML = '';
+        if (personalizedList) personalizedList.innerHTML = '';
+        if (personalizedSection) personalizedSection.classList.add('hidden');
+        loadOffers();
+    });
 
+    // Determina se un'offerta è "per te" confrontando il keyword con il catalogo frequente
+    function isPersonalized(offer) {
+        const keyword = (offer.keyword || '').toLowerCase();
+        const productName = offer.product.toLowerCase();
+        // Controlla se il catalogo ha elementi con alta frequenza che matchano
+        const frequentItems = catalog.filter(c => (c.frequency || 0) >= 1);
+        return frequentItems.some(item => {
+            const n = item.name.toLowerCase();
+            return n.includes(keyword) || keyword.includes(n.split(' ')[0]) ||
+                   n.includes(productName.split(' ')[0]) ||
+                   productName.includes(n.split(' ')[0]);
+        });
+    }
+
+    function createOfferCard(offer, isForYou) {
+        const li = document.createElement('li');
+        li.className = 'offer-item';
+        
+        const imgUrl = getProductImage(offer.keyword, offer.product);
+        const mediaHtml = imgUrl 
+            ? `<img src="${imgUrl}" alt="${offer.product}">`
+            : `<div class="offer-placeholder-icon">${offer.icon || '🛒'}</div>`;
+
+        const discountHtml = offer.discount
+            ? `<div class="offer-discount-badge" style="position: absolute; top: 16px; right: 16px; background: var(--danger-color); color: white; padding: 4px 10px; border-radius: 20px; font-weight: 800; font-size: 12px;">-${offer.discount}%</div>`
+            : '';
+        
+        const forYouTag = isForYou
+            ? `<div style="position: absolute; bottom: 10px; left: 16px; background: rgba(0,0,0,0.7); color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700;">⭐ CONSIGLIATO</div>`
+            : '';
+
+        li.innerHTML = `
+            <div class="offer-image-container">
+                <span class="offer-badge-market" data-market="${offer.supermarketKey || ''}">${offer.supermarket}</span>
+                ${mediaHtml}
+                ${discountHtml}
+                ${forYouTag}
+            </div>
+            <div class="offer-details">
+                <div class="offer-product">${offer.product}</div>
+                <div class="offer-location">${offer.location || ''}</div>
+                <div class="offer-footer">
+                    <div class="offer-price-group">
+                        <div class="offer-price-current">€${Number(offer.price).toFixed(2)}</div>
+                        ${offer.originalPrice ? `<div class="offer-price-original">€${offer.originalPrice.toFixed(2)}</div>` : ''}
+                    </div>
+                    <div class="offer-add-action">+</div>
+                </div>
+            </div>
+        `;
+
+        li.addEventListener('click', () => {
+            const added = getOrCreateCatalogItem(offer.product);
+            added.price = parseFloat(offer.price);
+            added.icon = offer.icon || '🛒';
+
+            if (!shoppingList.some(i => i.name.toLowerCase() === added.name.toLowerCase())) {
+                added.frequency = (added.frequency || 0) + 1;
+                shoppingList.push({ ...added, id: Date.now(), completed: false });
+                saveState();
+                renderList();
+                showToast('✅ ' + offer.product + ' aggiunto!');
+            } else {
+                showToast('⚠️ Già nella lista!');
+            }
+        });
+
+        return li;
+    }
+
+    function renderOffers(offers) {
+        if (!offersList) return;
+
+        // Filtra per supermercato
+        const filtered = activeMarketFilter === 'all'
+            ? offers
+            : offers.filter(o => o.supermarketKey === activeMarketFilter);
+
+        // Separa consigliate
+        const personalized = filtered.filter(o => isPersonalized(o));
+        const rest = filtered.filter(o => !isPersonalized(o));
+
+        // Sezione "Consigliate per te"
+        if (personalizedList && personalizedSection) {
+            personalizedList.innerHTML = '';
+            if (personalized.length > 0) {
+                personalizedSection.classList.remove('hidden');
+                personalized.forEach(o => personalizedList.appendChild(createOfferCard(o, true)));
+            } else {
+                personalizedSection.classList.add('hidden');
+            }
+        }
+
+        // Tutte le offerte (esclude le personalizzate se mostrate sopra)
+        offersList.innerHTML = '';
+        if (filtered.length === 0) {
+            offersList.innerHTML = `
+                <div class="offers-empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <p>Nessuna offerta trovata<br>per questo supermercato.</p>
+                </div>`;
+            if (allOffersTitle) allOffersTitle.textContent = '📋 Tutte le Offerte';
+            return;
+        }
+
+        if (allOffersTitle) {
+            allOffersTitle.textContent = personalized.length > 0 ? '📋 Altre Offerte' : '📋 Tutte le Offerte';
+        }
+
+        if (rest.length === 0 && personalized.length > 0) {
+            offersList.innerHTML = `<div class="offers-empty-state" style="padding: 20px 0;"><p>Tutte le offerte disponibili<br>sono già nei tuoi consigli!</p></div>`;
+        } else {
+            rest.forEach(o => offersList.appendChild(createOfferCard(o, false)));
+        }
+    }
 
     async function renderFlyers() {
         if (!flyersList) return;
@@ -645,7 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="offer-product">${f.name}</div>
                         <div class="offer-location">Volantino della settimana</div>
                     </div>
-                    <button class="flyer-btn" onclick="openPdfModal('${f.url}', '${f.name.replace(/'/g, "\\'")}')">Sfoglia</button>
+                    <a href="${f.url}" target="_blank" class="flyer-btn">Apri</a>
                 `;
                 flyersList.appendChild(li);
             });
@@ -660,29 +788,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function loadOffers() {
+        if (offersList) {
+            offersList.innerHTML = `
+                <div class="offers-empty-state">
+                    <div class="empty-icon">⏳</div>
+                    <p>Caricamento offerte...</p>
+                </div>`;
+        }
+        if (offersValidityEl) offersValidityEl.textContent = 'Aggiornamento...';
 
+        try {
+            const res = await fetch('offerte.json?t=' + new Date().getTime());
+            if (!res.ok) throw new Error("File non trovato");
+            const data = await res.json();
+
+            allOffersData = data.offers || [];
+
+            // Mostra validità
+            if (offersValidityEl && data.validFrom && data.validTo) {
+                const from = new Date(data.validFrom).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+                const to = new Date(data.validTo).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+                offersValidityEl.textContent = `Valide dal ${from} al ${to} · ${allOffersData.length} offerte`;
+            } else if (offersValidityEl) {
+                offersValidityEl.textContent = `${allOffersData.length} offerte disponibili`;
+            }
+
+            renderOffers(allOffersData);
+            offersLoaded = true;
+
+        } catch (e) {
+            console.log('Error loading offers:', e);
+            if (offersList) {
+                offersList.innerHTML = `
+                    <div class="offers-empty-state">
+                        <div class="empty-icon">⚠️</div>
+                        <p>Impossibile caricare le offerte.<br>
+                        <a href="https://www.promoqui.it/volantino/lidl" target="_blank" style="color: var(--accent-color);">Apri Promoqui</a>
+                        </p>
+                    </div>`;
+            }
+            if (offersValidityEl) offersValidityEl.textContent = 'Errore caricamento';
+        }
+    }
 
     // Inizializza UI
     renderList();
-
-    // Gestione PDF Modal
-    const pdfModal = document.getElementById('pdf-modal');
-    const pdfIframe = document.getElementById('pdf-iframe');
-    const pdfTitle = document.getElementById('pdf-modal-title');
-    const closePdfBtn = document.getElementById('close-pdf-modal');
-
-    window.openPdfModal = function(url, title) {
-        if (pdfTitle) pdfTitle.textContent = title;
-        if (pdfIframe) pdfIframe.src = url;
-        if (pdfModal) pdfModal.classList.remove('hidden');
-    };
-
-    if (closePdfBtn) {
-        closePdfBtn.addEventListener('click', () => {
-            if (pdfModal) pdfModal.classList.add('hidden');
-            if (pdfIframe) pdfIframe.src = ''; // Ferma il caricamento
-        });
-    }
 
     // === PWA & iOS Logic ===
     const isIos = () => {

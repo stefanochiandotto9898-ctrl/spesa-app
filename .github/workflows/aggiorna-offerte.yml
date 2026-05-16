@@ -1,4 +1,4 @@
-name: 🛒 Aggiorna Volantini Supermercati
+name: 🛒 Aggiorna Offerte Supermercati
 
 on:
   # Esegui ogni martedì alle 07:30 (ora italiana = 05:30 UTC)
@@ -14,18 +14,10 @@ on:
         default: 'false'
         type: boolean
 
-  # Permetti l'innesco dal pulsante 'Aggiorna' del sito (Netlify function)
-  repository_dispatch:
-    types: [trigger-scraper]
-
 jobs:
   scrape-and-deploy:
     name: Scraper Offerte + Deploy Netlify
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     
     steps:
       # 1. Checkout del codice
@@ -64,10 +56,15 @@ jobs:
       - name: 📦 Installa dipendenze Python
         run: |
           pip install playwright requests
-          sudo python3 -m playwright install-deps
-          python3 -m playwright install chromium
+          python3 -m playwright install --with-deps chromium
 
-      # 7. Esegui lo scraper volantini (Python)
+      # 7. Esegui gli scraper
+      - name: 🔍 Esegui scraper offerte (Node)
+        working-directory: scraper
+        run: node index.js
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'false'
+
       - name: 📄 Esegui scraper volantini (Python)
         working-directory: scraper
         run: python3 volantini_scraper.py
@@ -76,7 +73,7 @@ jobs:
       - name: 🔎 Verifica modifiche
         id: check_changes
         run: |
-          git add volantini.json volantini/
+          git add offerte.json volantini.json volantini/
           if git diff --cached --quiet; then
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "ℹ️ Nessuna modifica rilevata."
@@ -94,19 +91,14 @@ jobs:
           git commit -m "🏷️ Aggiorna offerte e volantini - $(date '+%d/%m/%Y')"
           git push
 
-      # 10. (Opzionale) Se usi GitHub Pages, il deploy avviene in automatico
-      # ma possiamo aggiungere uno step informativo.
-      - name: 🚀 Update completato
-        if: steps.check_changes.outputs.changed == 'true' || github.event.inputs.force_deploy == 'true'
-        run: echo "I file sono stati aggiornati. GitHub Pages rilascerà a breve la nuova versione."
-
-      # 11. Riepilogo
+      # 10. Riepilogo
       - name: 📊 Riepilogo
         run: |
           echo "### 🛒 Aggiornamento Completato" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Tipo | Risultato |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|-----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Offerte | ${{ steps.check_changes.outputs.changed }} |" >> $GITHUB_STEP_SUMMARY
           if [ -f "volantini.json" ]; then
             COUNT=$(python3 -c "import json; d=json.load(open('volantini.json')); print(len(d.get('flyers',[])))")
             echo "| Volantini scaricati | $COUNT |" >> $GITHUB_STEP_SUMMARY
