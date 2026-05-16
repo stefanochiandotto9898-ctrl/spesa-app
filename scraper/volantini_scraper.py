@@ -43,13 +43,19 @@ async def scrape_visotto(browser):
     print("[Visotto] Ricerca volantino...")
     page = await browser.new_page()
     try:
-        await page.goto("https://supermercativisotto.it/volantino", wait_until="networkidle")
+        await page.goto("https://supermercativisotto.it/volantino", wait_until="domcontentloaded")
         # Accetta cookie se presente
-        cookie_btn = await page.query_selector("button:has-text('Accetta'), .cc-accept")
-        if cookie_btn: await cookie_btn.click()
+        try:
+            cookie_btn = await page.query_selector("button:has-text('Accetta'), .cc-accept")
+            if cookie_btn: await cookie_btn.click()
+        except:
+            pass
         
-        # Trova il link PDF
-        pdf_link = await page.get_attribute("a:has-text('SCARICALO QUI')", "href")
+        # Trova il link PDF (cerca l'estensione invece del testo)
+        pdf_link = await page.get_attribute("a[href$='.pdf']", "href")
+        if not pdf_link:
+            pdf_link = await page.get_attribute("a:has-text('SCARICA')", "href")
+            
         if pdf_link:
             if not pdf_link.startswith("http"):
                 pdf_link = "https://supermercativisotto.it" + pdf_link
@@ -64,28 +70,28 @@ async def scrape_lidl(browser):
     print("[Lidl] Ricerca volantino...")
     page = await browser.new_page()
     try:
-        # URL specifico per Portogruaro (ID s10022792)
-        await page.goto("https://www.lidl.it/c/volantino-online/s10022792", wait_until="networkidle")
+        # URL generale volantini Lidl
+        await page.goto("https://www.lidl.it/volantini", wait_until="domcontentloaded")
         
         # Gestione cookie
-        cookie_btn = await page.query_selector("#onetrust-accept-btn-handler")
-        if cookie_btn: await cookie_btn.click()
+        try:
+            cookie_btn = await page.query_selector("#onetrust-accept-btn-handler")
+            if cookie_btn: await cookie_btn.click()
+        except:
+            pass
         
-        # Spesso Lidl usa un viewer. Cerchiamo il pulsante di download o il link diretto
-        # In alternativa, cerchiamo l'elemento del volantino più a sinistra
-        flyer_card = await page.query_selector(".flyer-tile, .flyer-item")
-        if flyer_card:
-            await flyer_card.click()
-            await page.wait_for_timeout(2000)
-            
-            # Cerca il link PDF nel viewer
-            pdf_link = await page.get_attribute("a[href$='.pdf']", "href")
-            if not pdf_link:
-                # Prova a estrarre dall'attributo data o simili
-                pdf_link = await page.get_attribute("button.download-btn", "data-url")
-            
-            if pdf_link:
-                return await download_file(pdf_link, "lidl")
+        # Troviamo il bottone PDF
+        pdf_link = await page.get_attribute("a[href$='.pdf']", "href")
+        if not pdf_link:
+            # A volte Lidl apre un viewer o iframe
+            iframe = await page.query_selector("iframe")
+            if iframe:
+                pdf_link = await iframe.get_attribute("src")
+        
+        if pdf_link:
+            if not pdf_link.startswith("http"):
+                pdf_link = "https://www.lidl.it" + pdf_link
+            return await download_file(pdf_link, "lidl")
     except Exception as e:
         print(f"[Lidl] Errore: {e}")
     finally:
@@ -160,9 +166,12 @@ async def main():
         
         # Verifica se abbiamo trovato almeno un volantino
         if not flyers_data:
-            print("⚠️ Nessun volantino trovato. Salto l'aggiornamento del file JSON per preservare i dati esistenti.")
-            await browser.close()
-            return
+            print("⚠️ Nessun volantino trovato. Uso dati di fallback temporanei per testare la UI.")
+            # Fallback for testing UI if scraping fails
+            flyers_data = [
+                {"name": "IperVisotto (Fallback)", "url": "https://supermercativisotto.it/volantino", "icon": "🛒"},
+                {"name": "Lidl (Fallback)", "url": "https://www.lidl.it/volantini", "icon": "🍋"}
+            ]
 
         # Scrivi JSON
         with open(JSON_FILE, 'w', encoding='utf-8') as f:

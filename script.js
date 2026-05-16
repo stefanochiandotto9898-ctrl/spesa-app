@@ -622,7 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="offer-product">${f.name}</div>
                         <div class="offer-location">Volantino della settimana</div>
                     </div>
-                    <a href="${f.url}" target="_blank" class="flyer-btn">Apri</a>
+                    <button class="flyer-btn" onclick="openPdfModal('${f.url}', '${f.name.replace(/'/g, "\\'")}')">Sfoglia</button>
                 `;
                 flyersList.appendChild(li);
             });
@@ -641,6 +641,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Inizializza UI
     renderList();
+
+    // Gestione PDF Modal
+    const pdfModal = document.getElementById('pdf-modal');
+    const pdfIframe = document.getElementById('pdf-iframe');
+    const pdfTitle = document.getElementById('pdf-modal-title');
+    const closePdfBtn = document.getElementById('close-pdf-modal');
+
+    window.openPdfModal = function(url, title) {
+        if (pdfTitle) pdfTitle.textContent = title;
+        if (pdfIframe) pdfIframe.src = url;
+        if (pdfModal) pdfModal.classList.remove('hidden');
+    };
+
+    if (closePdfBtn) {
+        closePdfBtn.addEventListener('click', () => {
+            if (pdfModal) pdfModal.classList.add('hidden');
+            if (pdfIframe) pdfIframe.src = ''; // Ferma il caricamento
+        });
+    }
 
     // === PWA & iOS Logic ===
     const isIos = () => {
