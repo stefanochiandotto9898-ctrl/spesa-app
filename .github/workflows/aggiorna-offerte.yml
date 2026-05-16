@@ -94,13 +94,11 @@ jobs:
           git commit -m "🏷️ Aggiorna offerte e volantini - $(date '+%d/%m/%Y')"
           git push
 
-      # 10. Deploy su Netlify
-      - name: 🚀 Deploy su Netlify
+      # 10. (Opzionale) Se usi GitHub Pages, il deploy avviene in automatico
+      # ma possiamo aggiungere uno step informativo.
+      - name: 🚀 Update completato
         if: steps.check_changes.outputs.changed == 'true' || github.event.inputs.force_deploy == 'true'
-        run: |
-          curl -s -X POST "${{ secrets.NETLIFY_DEPLOY_HOOK }}"
-          echo "✅ Netlify deploy avviato!"
-        continue-on-error: true
+        run: echo "I file sono stati aggiornati. GitHub Pages rilascerà a breve la nuova versione."
 
       # 11. Riepilogo
       - name: 📊 Riepilogo

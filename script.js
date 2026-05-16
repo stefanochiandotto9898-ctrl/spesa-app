@@ -568,20 +568,43 @@ document.addEventListener('DOMContentLoaded', () => {
     // Pulsante aggiorna volantini
     flyersRefreshBtn?.addEventListener('click', async () => {
         if (!flyersList) return;
+        
+        let token = localStorage.getItem('spesa_github_token');
+        if (!token) {
+            token = prompt("Per aggiornare i volantini, inserisci il tuo GitHub Personal Access Token:");
+            if (!token) return;
+            localStorage.setItem('spesa_github_token', token);
+        }
+
         flyersList.innerHTML = `
             <div class="offers-empty-state">
                 <div class="empty-icon">⏳</div>
-                <p>Avvio dell'aggiornamento...<br><small>Richiederà circa 1-2 minuti.</small></p>
+                <p>Avvio dell'aggiornamento...<br><small>Richiederà circa 1-2 minuti. Torna tra poco e sfoglia i nuovi volantini!</small></p>
             </div>`;
         showToast('Inizio aggiornamento volantini...');
 
         try {
-            const res = await fetch('/.netlify/functions/trigger-update', { method: 'POST' });
+            const res = await fetch('https://api.github.com/repos/stefanochiandotto9898-ctrl/spesa-app/dispatches', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    event_type: 'trigger-scraper'
+                })
+            });
+
             if (res.ok) {
                 showToast('Aggiornamento avviato! Torna tra poco.');
+            } else if (res.status === 401 || res.status === 403) {
+                showToast('Token non valido. Riprova.');
+                localStorage.removeItem('spesa_github_token');
+                renderFlyers();
             } else {
                 showToast('Errore avvio aggiornamento.');
-                renderFlyers(); // ripristina
+                renderFlyers();
             }
         } catch (e) {
             console.error(e);
