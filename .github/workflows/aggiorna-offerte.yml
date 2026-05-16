@@ -1,4 +1,4 @@
-name: 🛒 Aggiorna Offerte Supermercati
+name: 🛒 Aggiorna Volantini Supermercati
 
 on:
   # Esegui ogni martedì alle 07:30 (ora italiana = 05:30 UTC)
@@ -13,6 +13,10 @@ on:
         required: false
         default: 'false'
         type: boolean
+
+  # Permetti l'innesco dal pulsante 'Aggiorna' del sito (Netlify function)
+  repository_dispatch:
+    types: [trigger-scraper]
 
 jobs:
   scrape-and-deploy:
@@ -63,13 +67,7 @@ jobs:
           sudo python3 -m playwright install-deps
           python3 -m playwright install chromium
 
-      # 7. Esegui gli scraper
-      - name: 🔍 Esegui scraper offerte (Node)
-        working-directory: scraper
-        run: node index.js
-        env:
-          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'false'
-
+      # 7. Esegui lo scraper volantini (Python)
       - name: 📄 Esegui scraper volantini (Python)
         working-directory: scraper
         run: python3 volantini_scraper.py
@@ -78,7 +76,7 @@ jobs:
       - name: 🔎 Verifica modifiche
         id: check_changes
         run: |
-          git add offerte.json volantini.json volantini/
+          git add volantini.json volantini/
           if git diff --cached --quiet; then
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "ℹ️ Nessuna modifica rilevata."
@@ -111,7 +109,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Tipo | Risultato |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|-----------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Offerte | ${{ steps.check_changes.outputs.changed }} |" >> $GITHUB_STEP_SUMMARY
           if [ -f "volantini.json" ]; then
             COUNT=$(python3 -c "import json; d=json.load(open('volantini.json')); print(len(d.get('flyers',[])))")
             echo "| Volantini scaricati | $COUNT |" >> $GITHUB_STEP_SUMMARY

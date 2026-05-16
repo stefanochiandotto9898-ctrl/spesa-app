@@ -539,184 +539,58 @@ document.addEventListener('DOMContentLoaded', () => {
         toast._timeout = setTimeout(() => toast.classList.remove('show'), 2500);
     }
 
-    // === Toggles & Offerte ===
+    // === Toggles & Volantini ===
     const viewListBtn = document.getElementById('view-list-btn');
-    const viewOffersBtn = document.getElementById('view-offers-btn');
     const listView = document.getElementById('list-view');
-    const offersView = document.getElementById('offers-view');
-    const offersList = document.getElementById('offers-list');
-    const personalizedList = document.getElementById('personalized-list');
-    const personalizedSection = document.getElementById('personalized-section');
-    const offersValidityEl = document.getElementById('offers-validity');
-    const offersRefreshBtn = document.getElementById('offers-refresh-btn');
-    const allOffersTitle = document.getElementById('all-offers-title');
 
     const viewFlyersBtn = document.getElementById('view-flyers-btn');
     const volantiniView = document.getElementById('volantini-view');
     const flyersList = document.getElementById('flyers-list');
+    const flyersRefreshBtn = document.getElementById('flyers-refresh-btn');
 
-    let allOffersData = [];
-    let offersLoaded = false;
-    let activeMarketFilter = 'all';
-
-    if (viewListBtn && viewOffersBtn && viewFlyersBtn) {
+    if (viewListBtn && viewFlyersBtn) {
         viewListBtn.addEventListener('click', () => {
             viewListBtn.classList.add('active');
-            viewOffersBtn.classList.remove('active');
             viewFlyersBtn.classList.remove('active');
             listView.classList.remove('hidden');
-            offersView.classList.add('hidden');
             volantiniView.classList.add('hidden');
-        });
-
-        viewOffersBtn.addEventListener('click', () => {
-            viewOffersBtn.classList.add('active');
-            viewListBtn.classList.remove('active');
-            viewFlyersBtn.classList.remove('active');
-            offersView.classList.remove('hidden');
-            listView.classList.add('hidden');
-            volantiniView.classList.add('hidden');
-            if (!offersLoaded) loadOffers();
         });
 
         viewFlyersBtn.addEventListener('click', () => {
             viewFlyersBtn.classList.add('active');
             viewListBtn.classList.remove('active');
-            viewOffersBtn.classList.remove('active');
             volantiniView.classList.remove('hidden');
             listView.classList.add('hidden');
-            offersView.classList.add('hidden');
             renderFlyers();
         });
     }
 
-    // Filtri supermercato
-    document.getElementById('offers-filters')?.addEventListener('click', (e) => {
-        const chip = e.target.closest('.filter-chip');
-        if (!chip) return;
-        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        activeMarketFilter = chip.dataset.market;
-        renderOffers(allOffersData);
+    // Pulsante aggiorna volantini
+    flyersRefreshBtn?.addEventListener('click', async () => {
+        if (!flyersList) return;
+        flyersList.innerHTML = `
+            <div class="offers-empty-state">
+                <div class="empty-icon">⏳</div>
+                <p>Avvio dell'aggiornamento...<br><small>Richiederà circa 1-2 minuti.</small></p>
+            </div>`;
+        showToast('Inizio aggiornamento volantini...');
+
+        try {
+            const res = await fetch('/.netlify/functions/trigger-update', { method: 'POST' });
+            if (res.ok) {
+                showToast('Aggiornamento avviato! Torna tra poco.');
+            } else {
+                showToast('Errore avvio aggiornamento.');
+                renderFlyers(); // ripristina
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Errore di connessione.');
+            renderFlyers();
+        }
     });
 
-    // Pulsante aggiorna
-    offersRefreshBtn?.addEventListener('click', () => {
-        offersLoaded = false;
-        offersList.innerHTML = '';
-        if (personalizedList) personalizedList.innerHTML = '';
-        if (personalizedSection) personalizedSection.classList.add('hidden');
-        loadOffers();
-    });
 
-    // Determina se un'offerta è "per te" confrontando il keyword con il catalogo frequente
-    function isPersonalized(offer) {
-        const keyword = (offer.keyword || '').toLowerCase();
-        const productName = offer.product.toLowerCase();
-        // Controlla se il catalogo ha elementi con alta frequenza che matchano
-        const frequentItems = catalog.filter(c => (c.frequency || 0) >= 1);
-        return frequentItems.some(item => {
-            const n = item.name.toLowerCase();
-            return n.includes(keyword) || keyword.includes(n.split(' ')[0]) ||
-                   n.includes(productName.split(' ')[0]) ||
-                   productName.includes(n.split(' ')[0]);
-        });
-    }
-
-    function createOfferCard(offer, isForYou) {
-        const li = document.createElement('li');
-        li.className = 'offer-item' + (isForYou ? ' personalized-highlight' : '');
-        li.dataset.market = offer.supermarketKey || '';
-
-        const discountHtml = offer.discount
-            ? `<div class="offer-discount-badge">-${offer.discount}%</div>`
-            : '';
-        const originalPriceHtml = offer.originalPrice
-            ? `<div class="offer-price-original">€${offer.originalPrice.toFixed(2)}</div>`
-            : '';
-        const forYouTag = isForYou
-            ? `<div class="offer-for-you-tag">⭐ Per te</div>`
-            : '';
-
-        li.innerHTML = `
-            ${forYouTag}
-            <div class="offer-icon-wrap">${offer.icon || '🛒'}</div>
-            <div class="offer-info">
-                <span class="offer-supermarket-badge" data-market="${offer.supermarketKey || ''}">${offer.supermarket}</span>
-                <div class="offer-product">${offer.product}</div>
-                <div class="offer-location">${offer.location || ''}</div>
-            </div>
-            <div class="offer-prices">
-                <div class="offer-price-current">€${Number(offer.price).toFixed(2)}</div>
-                ${originalPriceHtml}
-                ${discountHtml}
-            </div>
-        `;
-
-        li.addEventListener('click', () => {
-            const added = getOrCreateCatalogItem(offer.product);
-            added.price = parseFloat(offer.price);
-            added.icon = offer.icon || '🛒';
-
-            if (!shoppingList.some(i => i.name.toLowerCase() === added.name.toLowerCase())) {
-                added.frequency = (added.frequency || 0) + 1;
-                shoppingList.push({ ...added, id: Date.now(), completed: false });
-                saveState();
-                renderList();
-                showToast('✅ ' + offer.product + ' aggiunto!');
-            } else {
-                showToast('⚠️ Già nella lista!');
-            }
-        });
-
-        return li;
-    }
-
-    function renderOffers(offers) {
-        if (!offersList) return;
-
-        // Filtra per supermercato
-        const filtered = activeMarketFilter === 'all'
-            ? offers
-            : offers.filter(o => o.supermarketKey === activeMarketFilter);
-
-        // Separa consigliate
-        const personalized = filtered.filter(o => isPersonalized(o));
-        const rest = filtered.filter(o => !isPersonalized(o));
-
-        // Sezione "Consigliate per te"
-        if (personalizedList && personalizedSection) {
-            personalizedList.innerHTML = '';
-            if (personalized.length > 0) {
-                personalizedSection.classList.remove('hidden');
-                personalized.forEach(o => personalizedList.appendChild(createOfferCard(o, true)));
-            } else {
-                personalizedSection.classList.add('hidden');
-            }
-        }
-
-        // Tutte le offerte (esclude le personalizzate se mostrate sopra)
-        offersList.innerHTML = '';
-        if (filtered.length === 0) {
-            offersList.innerHTML = `
-                <div class="offers-empty-state">
-                    <div class="empty-icon">🔍</div>
-                    <p>Nessuna offerta trovata<br>per questo supermercato.</p>
-                </div>`;
-            if (allOffersTitle) allOffersTitle.textContent = '📋 Tutte le Offerte';
-            return;
-        }
-
-        if (allOffersTitle) {
-            allOffersTitle.textContent = personalized.length > 0 ? '📋 Altre Offerte' : '📋 Tutte le Offerte';
-        }
-
-        if (rest.length === 0 && personalized.length > 0) {
-            offersList.innerHTML = `<div class="offers-empty-state" style="padding: 20px 0;"><p>Tutte le offerte disponibili<br>sono già nei tuoi consigli!</p></div>`;
-        } else {
-            rest.forEach(o => offersList.appendChild(createOfferCard(o, false)));
-        }
-    }
 
     async function renderFlyers() {
         if (!flyersList) return;
@@ -763,49 +637,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function loadOffers() {
-        if (offersList) {
-            offersList.innerHTML = `
-                <div class="offers-empty-state">
-                    <div class="empty-icon">⏳</div>
-                    <p>Caricamento offerte...</p>
-                </div>`;
-        }
-        if (offersValidityEl) offersValidityEl.textContent = 'Aggiornamento...';
 
-        try {
-            const res = await fetch('offerte.json?t=' + new Date().getTime());
-            if (!res.ok) throw new Error("File non trovato");
-            const data = await res.json();
-
-            allOffersData = data.offers || [];
-
-            // Mostra validità
-            if (offersValidityEl && data.validFrom && data.validTo) {
-                const from = new Date(data.validFrom).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
-                const to = new Date(data.validTo).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
-                offersValidityEl.textContent = `Valide dal ${from} al ${to} · ${allOffersData.length} offerte`;
-            } else if (offersValidityEl) {
-                offersValidityEl.textContent = `${allOffersData.length} offerte disponibili`;
-            }
-
-            renderOffers(allOffersData);
-            offersLoaded = true;
-
-        } catch (e) {
-            console.log('Error loading offers:', e);
-            if (offersList) {
-                offersList.innerHTML = `
-                    <div class="offers-empty-state">
-                        <div class="empty-icon">⚠️</div>
-                        <p>Impossibile caricare le offerte.<br>
-                        <a href="https://www.promoqui.it/volantino/lidl" target="_blank" style="color: var(--accent-color);">Apri Promoqui</a>
-                        </p>
-                    </div>`;
-            }
-            if (offersValidityEl) offersValidityEl.textContent = 'Errore caricamento';
-        }
-    }
 
     // Inizializza UI
     renderList();

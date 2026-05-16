@@ -30,7 +30,6 @@
 
         <div class="view-toggles">
             <button id="view-list-btn" class="toggle-btn active">🛍️ Lista</button>
-            <button id="view-offers-btn" class="toggle-btn">🏷️ Offerte</button>
             <button id="view-flyers-btn" class="toggle-btn">📄 Volantini</button>
         </div>
 
@@ -57,43 +56,15 @@
         </div>
         </div> <!-- chiusura list-view -->
 
-        <div id="offers-view" class="hidden">
-            <!-- Offerte Header -->
-            <div class="offers-header">
-                <div class="offers-validity" id="offers-validity">Caricamento...</div>
-                <button id="offers-refresh-btn" class="offers-refresh-btn" title="Aggiorna offerte">↻</button>
-            </div>
-
-            <!-- Filtri supermercato -->
-            <div class="offers-filters" id="offers-filters">
-                <button class="filter-chip active" data-market="all">Tutti</button>
-                <button class="filter-chip" data-market="visotto">Visotto</button>
-                <button class="filter-chip" data-market="lidl">Lidl</button>
-                <button class="filter-chip" data-market="despar">Despar</button>
-                <button class="filter-chip" data-market="dpiu">Dpiù</button>
-                <button class="filter-chip" data-market="conad">Conad</button>
-            </div>
-
-            <!-- Lista offerte scrollabile -->
-            <div class="offers-scroll-area">
-                <!-- Sezione Consigliate -->
-                <div id="personalized-section" class="offers-section hidden">
-                    <div class="offers-section-title">⭐ Consigliate per te</div>
-                    <ul id="personalized-list" class="offers-list-inner"></ul>
-                </div>
-
-                <!-- Tutte le offerte -->
-                <div class="offers-section">
-                    <div class="offers-section-title" id="all-offers-title">📋 Tutte le Offerte</div>
-                    <ul id="offers-list" class="offers-list-inner">
-                        <!-- Offers will be generated here -->
-                    </ul>
-            </div>
-        </div> <!-- chiusura offers-view -->
-
         <div id="volantini-view" class="hidden">
-            <div class="offers-header">
+            <div class="offers-header" style="justify-content: space-between;">
                 <div class="offers-validity">Sfoglia i volantini ufficiali</div>
+                <button id="flyers-refresh-btn" class="offers-refresh-btn" style="width: auto; padding: 0 15px; font-size: 14px; display: flex; align-items: center; gap: 5px;" title="Aggiorna Volantini">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 3V8H16M3 21V16H8M21 8C19.467 4.96696 16.2796 3 12.5 3C7.25329 3 3 7.25329 3 12.5M3 16C4.53304 19.033 7.72036 21 11.5 21C16.7467 21 21 16.7467 21 11.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Aggiorna
+                </button>
             </div>
             <div class="offers-scroll-area">
                 <ul id="flyers-list" class="offers-list-inner">
