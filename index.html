@@ -23,6 +23,7 @@
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <div id="connection-status" title="Connessione..." style="width: 10px; height: 10px; border-radius: 50%; background-color: #ffcc00;"></div>
                     <button id="pwa-install-btn" class="pwa-btn hidden" style="padding: 6px 12px; border-radius: 20px; background: #EEE; border:none; font-size:12px; font-weight:700;">Scarica App</button>
+                    <button id="profile-btn" style="background:transparent; border:none; font-size:22px; cursor:pointer; padding: 4px; display: flex; align-items: center; justify-content: center;" title="Profilo Utente">👤</button>
                 </div>
             </div>
         </header>
@@ -34,6 +35,31 @@
         </div>
 
         <div id="list-view">
+            <!-- Banner Permessi Notifiche -->
+            <div id="notification-banner" class="notification-banner hidden">
+                <div class="banner-content">
+                    <span class="banner-icon">🔔</span>
+                    <div class="banner-text">
+                        <strong>Attiva le notifiche</strong>
+                        <p>Ricevi avvisi quando la lista viene aggiornata</p>
+                    </div>
+                </div>
+                <button id="enable-notifications-btn" class="banner-btn">Attiva</button>
+                <button id="dismiss-notifications-btn" class="banner-close-btn">×</button>
+            </div>
+
+            <!-- Suggerimenti Predittivi -->
+            <div id="predictive-section" class="predictive-section hidden">
+                <div class="predictive-header">
+                    <span class="predictive-title">💡 Forse sono finiti</span>
+                </div>
+                <div class="predictive-scroll-area">
+                    <ul id="predictive-list" class="predictive-list-inner">
+                        <!-- Items will be generated here -->
+                    </ul>
+                </div>
+            </div>
+
             <div class="input-section">
             <div class="input-wrapper">
                 <input type="text" id="food-input" placeholder="Cosa ti serve?" autocomplete="off">
@@ -111,6 +137,17 @@
                 <li>Scorri in giù e tocca <strong>Aggiungi alla schermata Home <svg style="display:inline; vertical-align:middle;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></strong></li>
             </ol>
             <button id="close-ios-modal" class="modal-close-btn">Ho capito</button>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="modal-backdrop hidden">
+        <div class="ios-modal-content" style="padding: 24px;">
+            <h3 style="margin-bottom: 8px;">Il tuo Profilo</h3>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Inserisci il tuo nome per far sapere a chi condivide la lista che hai aggiunto o acquistato dei prodotti.</p>
+            <input type="text" id="username-input" placeholder="Es. Stefano" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 16px; font-family: inherit; margin-bottom: 20px; box-sizing: border-box; outline: none;">
+            <button id="save-profile-btn" style="width: 100%; padding: 14px; background: var(--accent-color); color: white; border: none; border-radius: var(--radius-sm); font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">Salva Profilo</button>
+            <button id="close-profile-btn" style="width: 100%; padding: 14px; background: transparent; color: var(--text-secondary); border: none; font-size: 15px; font-weight: 600; cursor: pointer;">Annulla</button>
         </div>
     </div>
 
