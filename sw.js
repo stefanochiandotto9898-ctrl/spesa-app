@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spesa-app-v3';
+const CACHE_NAME = 'spesa-app-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -34,14 +34,26 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Intercetta le richieste di rete (Network first per script e dati, Cache fallback)
+// Intercetta le richieste di rete (Network first con caching dinamico per asset locali, Cache fallback per offline)
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
-    })
+    fetch(event.request)
+      .then((response) => {
+        // Cache dinamica per le icone locali SVG e i file JSON delle offerte/volantini
+        const url = event.request.url;
+        if (response.ok && (url.includes('/cibi-bevande/') || url.endsWith('.json') || url.includes('/volantini/'))) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request);
+      })
   );
 });
 
