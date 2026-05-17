@@ -116,6 +116,34 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     }
 
+    // === SISTEMA NOTIFICHE ===
+    let myDeviceId = localStorage.getItem('spesa_device_id');
+    if (!myDeviceId) {
+        myDeviceId = 'device_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('spesa_device_id', myDeviceId);
+    }
+    
+    let currentLastAction = null;
+    
+    function sendLocalNotification(title, options) {
+        if (Notification.permission === 'granted') {
+            navigator.serviceWorker.ready.then(sw => {
+                sw.showNotification(title, options);
+            });
+        }
+    }
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'NOTIFICATION_ACTION') {
+                if (event.data.action === 'add_item' && event.data.data && event.data.data.itemName) {
+                    addToList(event.data.data.itemName);
+                    showToast('✅ ' + event.data.data.itemName + ' aggiunto dalla notifica!');
+                }
+            }
+        });
+    }
+
     // === CONFIGURAZIONE MQTT (Sincronizzazione in tempo reale) ===
     const MQTT_TOPIC = 'spesa-app-ste-room-secret-99'; // Canale univoco per la coppia
     let mqttClient = null;
@@ -163,6 +191,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else if (parsed && parsed.ts) {
                         incomingList = parsed.list;
                         incomingTs = parsed.ts;
+                        
+                        // Controlla azione per notifica
+                        if (parsed.lastAction && parsed.lastAction.deviceId !== myDeviceId) {
+                            if (parsed.lastAction.type === 'ADD') {
+                                const user = parsed.lastAction.user || 'Qualcuno';
+                                sendLocalNotification('Lista Aggiornata! 🛒', {
+                                    body: `🤖 ${user} ha aggiunto '${parsed.lastAction.item}' alla spesa.`,
+                                    icon: 'icon.png',
+                                    badge: 'icon.png'
+                                });
+                            }
+                        }
                     }
 
                     // Se il messaggio in arrivo è più recente del nostro o se abbiamo il formato vecchio
@@ -422,8 +462,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Invia la modifica all'altro telefono! (retain: true salva l'ultimo messaggio sul server)
         if (mqttClient && mqttClient.connected) {
-            const payload = JSON.stringify({ ts: lastUpdated, list: shoppingList });
+            const payload = JSON.stringify({ 
+                ts: lastUpdated, 
+                list: shoppingList,
+                lastAction: currentLastAction 
+            });
             mqttClient.publish(MQTT_TOPIC, payload, { retain: true });
+            currentLastAction = null; // Resetta dopo l'invio
         }
     }
 
@@ -452,6 +497,10 @@ document.addEventListener('DOMContentLoaded', () => {
             catalogItem.frequency = (catalogItem.frequency || 0) + 1;
             
             shoppingList.push({ ...catalogItem, id: Date.now(), completed: false });
+            
+            const username = localStorage.getItem('spesa_username') || 'Qualcuno';
+            currentLastAction = { type: 'ADD', item: catalogItem.name, deviceId: myDeviceId, user: username };
+            
             saveState();
             renderList();
         }
@@ -527,13 +576,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Toggle completato
             li.querySelector('.check-btn').addEventListener('click', () => {
+                const wasCompleted = item.completed;
                 item.completed = !item.completed;
+                
+                // Algoritmo Predittivo: Salva lo storico acquisti se viene spuntato
+                if (!wasCompleted && item.completed) {
+                    const catalogItem = catalog.find(c => c.name.toLowerCase() === item.name.toLowerCase());
+                    if (catalogItem) {
+                        catalogItem.purchaseDates = catalogItem.purchaseDates || [];
+                        catalogItem.purchaseDates.push(Date.now());
+                        // Mantieni solo gli ultimi 10 acquisti per non appesantire
+                        if (catalogItem.purchaseDates.length > 10) catalogItem.purchaseDates.shift();
+                    }
+                }
+                
                 saveState();
                 renderList();
             });
 
             li.querySelector('.item-name').addEventListener('click', () => {
+                const wasCompleted = item.completed;
                 item.completed = !item.completed;
+                
+                if (!wasCompleted && item.completed) {
+                    const catalogItem = catalog.find(c => c.name.toLowerCase() === item.name.toLowerCase());
+                    if (catalogItem) {
+                        catalogItem.purchaseDates = catalogItem.purchaseDates || [];
+                        catalogItem.purchaseDates.push(Date.now());
+                        if (catalogItem.purchaseDates.length > 10) catalogItem.purchaseDates.shift();
+                    }
+                }
+                
                 saveState();
                 renderList();
             });
@@ -931,13 +1004,50 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const isStandalone = () => {
-        return ('standalone' in window.navigator) && (window.navigator.standalone);
+        return ('standalone' in window.navigator) && (window.navigator.standalone) || window.matchMedia('(display-mode: standalone)').matches;
     };
 
     const installBtn = document.getElementById('pwa-install-btn');
     const notifyBtn = document.getElementById('pwa-notify-btn');
     const iosModal = document.getElementById('ios-install-modal');
     const closeModalBtn = document.getElementById('close-ios-modal');
+    
+    // Elementi del nuovo banner di installazione
+    const pwaBanner = document.getElementById('pwa-banner');
+    const pwaBannerInstallBtn = document.getElementById('pwa-banner-install-btn');
+    const pwaBannerCloseBtn = document.getElementById('pwa-banner-close-btn');
+
+    let deferredPrompt = null;
+
+    // Gestione Banner PWA
+    if (pwaBanner) {
+        if (!isStandalone() && !localStorage.getItem('spesa_pwa_banner_dismissed')) {
+            // Piccolo ritardo per mostrare il banner in modo più elegante
+            setTimeout(() => {
+                pwaBanner.classList.remove('hidden');
+            }, 2000);
+        }
+
+        pwaBannerCloseBtn?.addEventListener('click', () => {
+            pwaBanner.classList.add('hidden');
+            localStorage.setItem('spesa_pwa_banner_dismissed', 'true');
+        });
+
+        pwaBannerInstallBtn?.addEventListener('click', () => {
+            if (isIos()) {
+                if (iosModal) iosModal.classList.remove('hidden');
+            } else if (deferredPrompt) {
+                pwaBanner.classList.add('hidden');
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(() => {
+                    deferredPrompt = null;
+                });
+            } else {
+                // Fallback: mostra istruzioni generiche se non c'è deferredPrompt
+                showToast('ℹ️ Clicca sui tre puntini in alto a destra e seleziona "Aggiungi a schermata Home"');
+            }
+        });
+    }
 
     // Registra Service Worker
     if ('serviceWorker' in navigator) {
@@ -950,10 +1060,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isIos()) {
         if (!isStandalone()) {
-            // Siamo su Safari in iOS, mostra il pulsante "Scarica App"
+            // Siamo su Safari in iOS, mostra anche il pulsante in alto
             if (installBtn) installBtn.classList.remove('hidden');
             
-            // Gestisci il click per mostrare le istruzioni
             if (installBtn) {
                 installBtn.addEventListener('click', () => {
                     if (iosModal) iosModal.classList.remove('hidden');
@@ -965,61 +1074,121 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (iosModal) iosModal.classList.add('hidden');
                 });
             }
-        } else {
-            // Siamo nella PWA installata su iOS!
-            // Mostriamo il pulsante notifiche se supportate e non ancora permesse
-            if ('Notification' in window && Notification.permission !== 'granted') {
-                if (notifyBtn) notifyBtn.classList.remove('hidden');
-                
-                notifyBtn.addEventListener('click', async () => {
-                    const permission = await Notification.requestPermission();
-                    if (permission === 'granted') {
-                        notifyBtn.classList.add('hidden');
-                        // Mandiamo una notifica locale di benvenuto!
-                        if ('serviceWorker' in navigator) {
-                            navigator.serviceWorker.ready.then(registration => {
-                                registration.showNotification("Notifiche Attivate! 🎉", {
-                                    body: "Ora riceverai un avviso quando la spesa viene aggiornata.",
-                                    icon: "icon.png"
-                                });
-                            });
-                        }
-                    }
-                });
-            }
         }
     } else {
-        // Logica generica per Android/Chrome (opzionale)
-        let deferredPrompt;
+        // Logica Android/Chrome
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
+            
+            // Mostra il pulsante nella barra se presente
             if (installBtn) installBtn.classList.remove('hidden');
             
-            installBtn.addEventListener('click', () => {
+            installBtn?.addEventListener('click', () => {
                 installBtn.classList.add('hidden');
                 deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
+                deferredPrompt.userChoice.then(() => {
                     deferredPrompt = null;
                 });
             });
         });
     }
 
-    // Invia notifica locale quando riceviamo un messaggio MQTT e siamo in background (se permesso)
-    if ('Notification' in window && Notification.permission === 'granted' && isStandalone()) {
-        mqttClient.on('message', (topic, message) => {
-            // Mostra notifica solo se l'app è in background
-            if (document.hidden && 'serviceWorker' in navigator) {
-                navigator.serviceWorker.ready.then(registration => {
-                    registration.showNotification("Lista Aggiornata", {
-                        body: "Qualcuno ha modificato la lista della spesa.",
-                        icon: "icon.png",
-                        badge: "icon.png"
-                    });
-                });
-            }
+    // === GESTIONE PERMESSI NOTIFICHE (BANNER) ===
+    const notificationBanner = document.getElementById('notification-banner');
+    const enableNotificationsBtn = document.getElementById('enable-notifications-btn');
+    const dismissNotificationsBtn = document.getElementById('dismiss-notifications-btn');
+
+    if (notificationBanner && 'Notification' in window) {
+        if (Notification.permission === 'default' && !localStorage.getItem('spesa_notifications_dismissed')) {
+            notificationBanner.classList.remove('hidden');
+        }
+
+        enableNotificationsBtn?.addEventListener('click', () => {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    showToast('🔔 Notifiche attivate!');
+                    notificationBanner.classList.add('hidden');
+                }
+            });
+        });
+
+        dismissNotificationsBtn?.addEventListener('click', () => {
+            notificationBanner.classList.add('hidden');
+            localStorage.setItem('spesa_notifications_dismissed', 'true');
         });
     }
+
+    // === ALGORITMO PREDITTIVO ===
+    function checkPredictiveAlerts() {
+        const predictiveSection = document.getElementById('predictive-section');
+        const predictiveList = document.getElementById('predictive-list');
+        if (!predictiveSection || !predictiveList) return;
+
+        predictiveList.innerHTML = '';
+        let foundSuggestions = false;
+
+        const now = Date.now();
+        const oneDayMs = 24 * 60 * 60 * 1000;
+
+        catalog.forEach(item => {
+            if (item.purchaseDates && item.purchaseDates.length >= 2) {
+                // Calcola intervallo medio
+                let totalDiff = 0;
+                for (let i = 1; i < item.purchaseDates.length; i++) {
+                    totalDiff += (item.purchaseDates[i] - item.purchaseDates[i-1]);
+                }
+                const avgInterval = totalDiff / (item.purchaseDates.length - 1);
+                
+                const lastPurchase = item.purchaseDates[item.purchaseDates.length - 1];
+                const timeSinceLast = now - lastPurchase;
+
+                // Se è passato più del tempo medio + 1 giorno e l'item non è già nella lista spesa
+                if (timeSinceLast > (avgInterval + oneDayMs) && !shoppingList.some(slItem => slItem.name.toLowerCase() === item.name.toLowerCase())) {
+                    
+                    // Invia notifica predittiva (se non è stata inviata di recente)
+                    const lastAlertKey = 'spesa_alert_' + item.name;
+                    const lastAlertTime = parseInt(localStorage.getItem(lastAlertKey)) || 0;
+                    if (now - lastAlertTime > oneDayMs * 2) { // Non spammare (max 1 ogni 2 giorni per item)
+                        sendLocalNotification('💡 Forse è finito?', {
+                            body: `Sembra che '${item.name}' stia per finire! Vuoi aggiungerlo alla lista?`,
+                            icon: 'icon.png',
+                            badge: 'icon.png',
+                            actions: [
+                                { action: 'add_item', title: 'Aggiungi ora' }
+                            ],
+                            data: { itemName: item.name }
+                        });
+                        localStorage.setItem(lastAlertKey, now.toString());
+                    }
+
+                    // Aggiungi alla UI
+                    foundSuggestions = true;
+                    const li = document.createElement('li');
+                    li.className = 'predictive-item';
+                    const icon = item.icon || guessIcon(item.name);
+                    li.innerHTML = `
+                        <div class="predictive-icon">${icon}</div>
+                        <div class="predictive-info"><div class="predictive-name">${item.name}</div></div>
+                        <button class="predictive-add-btn">+</button>
+                    `;
+                    li.querySelector('.predictive-add-btn').addEventListener('click', () => {
+                        addToList(item.name);
+                        checkPredictiveAlerts(); // Aggiorna i suggerimenti
+                    });
+                    predictiveList.appendChild(li);
+                }
+            }
+        });
+
+        if (foundSuggestions) {
+            predictiveSection.classList.remove('hidden');
+        } else {
+            predictiveSection.classList.add('hidden');
+        }
+    }
+
+    // Esegui controllo predittivo all'avvio
+    setTimeout(checkPredictiveAlerts, 1500);
 
 });

@@ -35,6 +35,19 @@
         </div>
 
         <div id="list-view">
+            <!-- Banner Installazione PWA -->
+            <div id="pwa-banner" class="notification-banner hidden" style="background: linear-gradient(135deg, var(--accent-light), #F8BBD0); border: 1px solid #F8BBD0; margin-bottom: 12px;">
+                <div class="banner-content">
+                    <span class="banner-icon">📱</span>
+                    <div class="banner-text">
+                        <strong>Scarica l'App sul telefono</strong>
+                        <p>Usala offline e ricevi notifiche istantanee!</p>
+                    </div>
+                </div>
+                <button id="pwa-banner-install-btn" class="banner-btn" style="background: var(--accent-color); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; margin-left: 10px; box-shadow: 0 4px 12px rgba(233, 30, 99, 0.2);">Installa</button>
+                <button id="pwa-banner-close-btn" class="banner-close-btn">×</button>
+            </div>
+
             <!-- Banner Permessi Notifiche -->
             <div id="notification-banner" class="notification-banner hidden">
                 <div class="banner-content">

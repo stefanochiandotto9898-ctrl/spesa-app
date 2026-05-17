@@ -88,13 +88,26 @@ self.addEventListener('push', (event) => {
 // Click sulla notifica
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+
+  const action = event.action;
+  const notificationData = event.notification.data || {};
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      if (windowClients.length > 0) {
-        let client = windowClients[0];
-        client.focus();
+      let client = windowClients.length > 0 ? windowClients[0] : null;
+
+      if (!client) {
+        return clients.openWindow('/').then(newClient => {
+          // Attendi che il client sia pronto per ricevere il messaggio
+          if (newClient) {
+            setTimeout(() => {
+              newClient.postMessage({ type: 'NOTIFICATION_ACTION', action: action, data: notificationData });
+            }, 1000);
+          }
+        });
       } else {
-        clients.openWindow('/');
+        client.focus();
+        client.postMessage({ type: 'NOTIFICATION_ACTION', action: action, data: notificationData });
       }
     })
   );
