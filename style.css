@@ -28,7 +28,13 @@ body {
     color: var(--text-primary);
     display: flex;
     justify-content: center;
-    min-height: 100vh;
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    position: fixed;
+    margin: 0;
     padding: 0;
 }
 
@@ -38,7 +44,7 @@ body {
     max-width: 450px;
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100%;
     position: relative;
     overflow: hidden;
 }
@@ -153,6 +159,8 @@ input[type="text"] {
     padding: 0 24px;
     flex: 1;
     overflow-y: auto;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch; /* Butter-smooth scrolling on iOS Safari */
 }
 
 .list-item {
@@ -566,12 +574,15 @@ input[type="text"] {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
 }
 
 .offers-scroll-area {
     flex: 1;
     overflow-y: auto;
+    min-height: 0;
     padding-bottom: 24px;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* === SUGGERIMENTI DI RICERCA (Premium & Grandi) === */
