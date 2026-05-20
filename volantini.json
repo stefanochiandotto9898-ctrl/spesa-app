@@ -1,4 +1,5 @@
 {
+    "updated": "2026-05-20T20:06:10.990Z",
     "flyers": [
         {
             "name": "IperVisotto (Portogruaro)",
@@ -9,7 +10,16 @@
             "name": "Lidl (Portogruaro)",
             "url": "https://www.lidl.it/c/volantino-online/s10022792",
             "icon": "🍋"
+        },
+        {
+            "name": "Lidl",
+            "url": "https://www.anteprimavolantino.it/121299/volantino-lidl-gelati-dal-25-maggio-2026/",
+            "icon": "🍋"
+        },
+        {
+            "name": "Conad",
+            "url": "https://www.anteprimavolantino.it/121094/volantino-conad-city-lazio-dal-20-maggio-2026/",
+            "icon": "🌼"
         }
-    ],
-    "updated": "2026-05-11T19:11:00"
+    ]
 }
