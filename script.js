@@ -776,183 +776,138 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
 
     // Carica dati da LocalStorage
+    // --- NUOVA LOGICA DASHBOARD SCURA ---
+
     let catalog = JSON.parse(localStorage.getItem('spesa_catalog')) || defaultCatalog;
-    
-    // Se il catalogo locale non ha i dati completi, li uniamo forzatamente
-    visottoData.forEach(vItem => {
-        const existing = catalog.find(c => c.name.toLowerCase() === vItem.name.toLowerCase());
-        if (!existing) {
-            catalog.push({ name: vItem.name, price: vItem.price, icon: guessIcon(vItem.name) });
-        } else if (existing.price === 0) {
-            existing.price = vItem.price; // Aggiorna il prezzo se era 0
-        }
-    });
-    localStorage.setItem('spesa_catalog', JSON.stringify(catalog));
-
     let shoppingList = JSON.parse(localStorage.getItem('spesa_list')) || [];
+    let lastUpdated = Date.now();
+    let currentLastAction = null;
+    const myDeviceId = 'device_' + Math.random().toString(36).substr(2, 9);
+    
+    // MQTT Topic
+    const MQTT_TOPIC = 'spesa/lista/aggiornamenti';
 
-    const inputEl = document.getElementById('food-input');
-    const suggestionsEl = document.getElementById('suggestions');
-    const addBtn = document.getElementById('add-btn');
+    // UI Elements
     const shoppingListEl = document.getElementById('shopping-list');
     const totalAmountEl = document.getElementById('total-amount');
+    const predictiveListEl = document.getElementById('predictive-list');
+    const flyersListEl = document.getElementById('flyers-list');
+    
+    // FAB & Modal
+    const addFab = document.getElementById('add-fab');
+    const addItemModal = document.getElementById('add-item-modal');
+    const closeAddModal = document.getElementById('close-add-modal');
+    const foodInput = document.getElementById('food-input');
+    const suggestionsEl = document.getElementById('suggestions');
+    const addBtn = document.getElementById('add-btn');
 
-    // Salva in locale e pubblica in tempo reale
+    // Mappatura Categorie
+    function guessCategory(name) {
+        const n = name.toLowerCase();
+        if (n.includes('latte') || n.includes('yogurt') || n.includes('formaggio') || n.includes('mozzarella') || n.includes('burro')) {
+            return { id: 'Dairy', icon: '🥛', color: '#60A5FA' };
+        }
+        if (n.includes('mela') || n.includes('banana') || n.includes('frutta') || n.includes('verdura') || n.includes('pomodoro') || n.includes('insalata')) {
+            return { id: 'Fruit & Veg', icon: '🍎', color: '#10B981' };
+        }
+        if (n.includes('carne') || n.includes('pollo') || n.includes('pesce') || n.includes('salame') || n.includes('prosciutto')) {
+            return { id: 'Meat', icon: '🥩', color: '#F43F5E' };
+        }
+        if (n.includes('pane') || n.includes('pasta') || n.includes('riso') || n.includes('farina') || n.includes('biscotti') || n.includes('caffè')) {
+            return { id: 'Pantry', icon: '🥫', color: '#F59E0B' };
+        }
+        if (n.includes('acqua') || n.includes('vino') || n.includes('birra') || n.includes('succo')) {
+            return { id: 'Drinks', icon: '🥤', color: '#38BDF8' };
+        }
+        if (n.includes('detersivo') || n.includes('sapone') || n.includes('carta igienica') || n.includes('shampoo')) {
+            return { id: 'Home', icon: '🧻', color: '#8B5CF6' };
+        }
+        return { id: 'Other', icon: '🛒', color: '#94A3B8' };
+    }
+
     function saveState() {
         lastUpdated = Date.now();
         localStorage.setItem('spesa_last_updated', lastUpdated.toString());
         localStorage.setItem('spesa_catalog', JSON.stringify(catalog));
+        localStorage.setItem('spesa_list', JSON.stringify(shoppingList));
         
-        const listStr = JSON.stringify(shoppingList);
-        localStorage.setItem('spesa_list', listStr);
-        
-        // Invia la modifica all'altro telefono! (retain: true salva l'ultimo messaggio sul server)
-        if (mqttClient && mqttClient.connected) {
-            const payload = JSON.stringify({ 
-                ts: lastUpdated, 
-                list: shoppingList,
-                lastAction: currentLastAction 
-            });
+        if (typeof mqttClient !== 'undefined' && mqttClient && mqttClient.connected) {
+            const payload = JSON.stringify({ ts: lastUpdated, list: shoppingList, lastAction: currentLastAction });
             mqttClient.publish(MQTT_TOPIC, payload, { retain: true });
-            currentLastAction = null; // Resetta dopo l'invio
+            currentLastAction = null;
         }
     }
 
-    // Trova o crea item nel catalogo
     function getOrCreateCatalogItem(name) {
         const trimmedName = name.trim();
         let item = catalog.find(c => c.name.toLowerCase() === trimmedName.toLowerCase());
-        
         if (!item) {
             item = { name: trimmedName, icon: guessIcon(trimmedName), price: 0, frequency: 0 };
             catalog.push(item);
-            saveState(); // Aggiorna il catalogo in locale
+            saveState();
         }
         return item;
     }
 
-    // Aggiungi alla lista della spesa
     function addToList(name) {
         if (!name.trim()) return;
-        
         const catalogItem = getOrCreateCatalogItem(name);
         
-        // Evita duplicati nella lista della spesa attiva
         if (!shoppingList.some(i => i.name.toLowerCase() === catalogItem.name.toLowerCase())) {
-            // Incrementa la frequenza di utilizzo
             catalogItem.frequency = (catalogItem.frequency || 0) + 1;
-            
             shoppingList.push({ ...catalogItem, id: Date.now(), completed: false });
-            
-            const username = localStorage.getItem('spesa_username') || 'Qualcuno';
-            currentLastAction = { type: 'ADD', item: catalogItem.name, deviceId: myDeviceId, user: username };
-            
+            currentLastAction = { type: 'ADD', item: catalogItem.name, deviceId: myDeviceId };
             saveState();
             renderList();
         }
         
-        inputEl.value = '';
-        hideSuggestions();
-        inputEl.focus();
-    }
-    
-    // Aggiorna il totale stimato
-    function updateTotal() {
-        if (!totalAmountEl) return;
-        const total = shoppingList.reduce((sum, item) => {
-            return sum + (Number(item.price) || 0);
-        }, 0);
-        totalAmountEl.textContent = total.toFixed(2) + ' €';
+        foodInput.value = '';
+        suggestionsEl.classList.add('hidden');
+        addItemModal.classList.add('hidden');
     }
 
-    // Disegna la lista
+    function updateTotal() {
+        if (!totalAmountEl) return;
+        const total = shoppingList.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+        totalAmountEl.textContent = '€' + total.toFixed(2);
+    }
+
     function renderList() {
+        if (!shoppingListEl) return;
         shoppingListEl.innerHTML = '';
         
-        if(shoppingList.length === 0) {
-            shoppingListEl.innerHTML = `
-                <div style="text-align: center; color: var(--text-secondary); padding: 40px 20px; font-size: 15px;">
-                    <div style="font-size: 48px; margin-bottom: 16px;">🛍️</div>
-                    La tua lista è vuota.<br>Aggiungi qualcosa qui sopra!
-                </div>
-            `;
+        if (shoppingList.length === 0) {
+            shoppingListEl.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 40px 20px;">Lista vuota. Aggiungi qualcosa!</div>`;
             updateTotal();
             return;
         }
 
         shoppingList.forEach(item => {
+            const cat = guessCategory(item.name);
             const li = document.createElement('li');
-            li.className = 'list-item';
+            li.className = `list-item ${item.completed ? 'completed' : ''}`;
             
-            const imgUrl = getProductImage(item.keyword, item.name);
-            const iconHtml = imgUrl 
-                ? `<div class="item-icon" style="padding: 5px;"><img src="${imgUrl}" style="width:100%; height:100%; object-fit:contain;"></div>`
-                : `<div class="item-icon">${item.icon}</div>`;
-
+            // Layout List Item Complex
             li.innerHTML = `
-                ${iconHtml}
-                <div class="item-name ${item.completed ? 'completed' : ''}">${item.name}</div>
-                
-                <div class="item-price-wrapper">
-                    <input type="number" class="price-input" step="0.10" min="0" placeholder="0.00" value="${item.price > 0 ? item.price : ''}">
-                    <span class="price-currency">€</span>
+                <div class="item-category-tile">
+                    <span class="tile-icon">${cat.icon}</span>
+                    <span class="tile-label">${cat.id}</span>
                 </div>
-                
-                <button class="check-btn ${item.completed ? 'checked' : ''}" aria-label="Segna completato"></button>
-                <button class="delete-btn" aria-label="Elimina" style="background:transparent; border:none; color: #CCC; margin-left:10px; font-size:18px;">×</button>
+                <div class="item-content">
+                    <div class="item-main-row">
+                        <div class="item-checkbox ${item.completed ? 'checked' : ''}"></div>
+                        <div class="item-name">${item.name}</div>
+                    </div>
+                    <div class="item-progress-track">
+                        <div class="item-progress-fill" style="width: 100%; background: ${cat.color};"></div>
+                    </div>
+                    ${item.price > 0 ? `<div class="item-badge">€${Number(item.price).toFixed(2)}</div>` : ''}
+                </div>
             `;
 
-            li.querySelector('.delete-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                shoppingList = shoppingList.filter(i => i.id !== item.id);
-                saveState();
-                renderList();
-            });
-
-            // Gestione prezzo
-            const priceInput = li.querySelector('.price-input');
-            priceInput.addEventListener('change', (e) => {
-                const newPrice = parseFloat(e.target.value) || 0;
-                item.price = newPrice;
-                const catalogItem = catalog.find(c => c.name.toLowerCase() === item.name.toLowerCase());
-                if (catalogItem) catalogItem.price = newPrice;
-                saveState();
-                updateTotal();
-            });
-
-            // Toggle completato
-            li.querySelector('.check-btn').addEventListener('click', () => {
-                const wasCompleted = item.completed;
+            // Toglie/Aggiungi spunta
+            li.addEventListener('click', (e) => {
                 item.completed = !item.completed;
-                
-                // Algoritmo Predittivo: Salva lo storico acquisti se viene spuntato
-                if (!wasCompleted && item.completed) {
-                    const catalogItem = catalog.find(c => c.name.toLowerCase() === item.name.toLowerCase());
-                    if (catalogItem) {
-                        catalogItem.purchaseDates = catalogItem.purchaseDates || [];
-                        catalogItem.purchaseDates.push(Date.now());
-                        // Mantieni solo gli ultimi 10 acquisti per non appesantire
-                        if (catalogItem.purchaseDates.length > 10) catalogItem.purchaseDates.shift();
-                    }
-                }
-                
-                saveState();
-                renderList();
-            });
-
-            li.querySelector('.item-name').addEventListener('click', () => {
-                const wasCompleted = item.completed;
-                item.completed = !item.completed;
-                
-                if (!wasCompleted && item.completed) {
-                    const catalogItem = catalog.find(c => c.name.toLowerCase() === item.name.toLowerCase());
-                    if (catalogItem) {
-                        catalogItem.purchaseDates = catalogItem.purchaseDates || [];
-                        catalogItem.purchaseDates.push(Date.now());
-                        if (catalogItem.purchaseDates.length > 10) catalogItem.purchaseDates.shift();
-                    }
-                }
-                
                 saveState();
                 renderList();
             });
@@ -963,578 +918,92 @@ document.addEventListener('DOMContentLoaded', () => {
         updateTotal();
     }
 
-    // Gestione Suggerimenti
-    function showSuggestions(query) {
-        let matches = [];
-        let exactMatch = null;
+    // Modal Add Product
+    addFab.addEventListener('click', () => {
+        addItemModal.classList.remove('hidden');
+        setTimeout(() => foodInput.focus(), 100);
+    });
 
-        if (!query.trim()) {
-            // Mostra i più frequenti se non si sta cercando nulla
-            matches = catalog.filter(c => (c.frequency || 0) > 0)
-                             .sort((a, b) => b.frequency - a.frequency)
-                             .slice(0, 5);
-            if (matches.length === 0) {
-                hideSuggestions();
-                return;
-            }
-        } else {
-            const lowerQuery = query.toLowerCase();
-            matches = catalog.filter(c => c.name.toLowerCase().includes(lowerQuery));
-            
-            // Ordina per frequenza (dal più usato al meno usato)
-            matches.sort((a, b) => (b.frequency || 0) - (a.frequency || 0));
-            
-            exactMatch = matches.find(c => c.name.toLowerCase() === lowerQuery);
+    closeAddModal.addEventListener('click', () => {
+        addItemModal.classList.add('hidden');
+    });
+
+    addBtn.addEventListener('click', () => addToList(foodInput.value));
+    
+    foodInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addToList(foodInput.value);
         }
-        
+    });
+
+    foodInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
         suggestionsEl.innerHTML = '';
-        
+        if (!query.trim()) {
+            suggestionsEl.classList.add('hidden');
+            return;
+        }
+        const matches = catalog.filter(c => c.name.toLowerCase().includes(query)).slice(0, 5);
         if (matches.length > 0) {
             matches.forEach(match => {
                 const li = document.createElement('li');
                 li.className = 'suggestion-item';
-                
-                const priceHint = match.price > 0 ? `<span style="margin-left: auto; color: var(--text-secondary); font-size: 14px;">${match.price.toFixed(2)}€</span>` : '';
-                const freqHint = (!query.trim() && (match.frequency || 0) > 0) ? `<span style="margin-left: 5px; font-size: 12px; color: var(--accent-color); font-weight: 600;" title="Aggiunto spesso">★</span>` : '';
-                
-                li.innerHTML = `<span class="suggestion-icon">${match.icon}</span> <span class="suggestion-text">${match.name} ${freqHint}</span> ${priceHint}`;
-                li.addEventListener('click', () => {
-                    addToList(match.name);
-                });
+                li.innerHTML = `<span class="suggestion-icon" style="color: white;">${guessIcon(match.name)}</span> <span style="color: white;">${match.name}</span>`;
+                li.addEventListener('click', () => addToList(match.name));
                 suggestionsEl.appendChild(li);
             });
-        }
-        
-        if (query.trim() && !exactMatch) {
-            const newIcon = guessIcon(query);
-            const li = document.createElement('li');
-            li.className = 'suggestion-item';
-            li.style.color = 'var(--accent-color)';
-            li.innerHTML = `<span class="suggestion-icon">${newIcon}</span> <span class="suggestion-text">Aggiungi "${query}"</span>`;
-            li.addEventListener('click', () => {
-                addToList(query);
-            });
-            suggestionsEl.appendChild(li);
-        }
-
-        suggestionsEl.classList.remove('hidden');
-    }
-
-    function hideSuggestions() {
-        suggestionsEl.classList.add('hidden');
-    }
-
-    // Event Listeners
-    inputEl.addEventListener('focus', (e) => {
-        showSuggestions(e.target.value);
-    });
-
-    inputEl.addEventListener('input', (e) => {
-        showSuggestions(e.target.value);
-    });
-
-    inputEl.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            addToList(inputEl.value);
-        }
-    });
-
-    addBtn.addEventListener('click', () => {
-        addToList(inputEl.value);
-    });
-
-    // Nascondi suggerimenti se clicchi fuori
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.input-section')) {
-            hideSuggestions();
-        }
-    });
-    // === Toast Notification ===
-    function showToast(msg) {
-        let toast = document.getElementById('app-toast');
-        if (!toast) {
-            toast = document.createElement('div');
-            toast.id = 'app-toast';
-            toast.className = 'toast';
-            document.body.appendChild(toast);
-        }
-        toast.textContent = msg;
-        toast.classList.add('show');
-        clearTimeout(toast._timeout);
-        toast._timeout = setTimeout(() => toast.classList.remove('show'), 2500);
-    }
-
-    // === Toggles & Offerte ===
-    const viewListBtn = document.getElementById('view-list-btn');
-    const viewOffersBtn = document.getElementById('view-offers-btn');
-    const listView = document.getElementById('list-view');
-    const offersView = document.getElementById('offers-view');
-    const offersList = document.getElementById('offers-list');
-    const personalizedList = document.getElementById('personalized-list');
-    const personalizedSection = document.getElementById('personalized-section');
-    const offersValidityEl = document.getElementById('offers-validity');
-    const offersRefreshBtn = document.getElementById('offers-refresh-btn');
-    const allOffersTitle = document.getElementById('all-offers-title');
-
-    const viewFlyersBtn = document.getElementById('view-flyers-btn');
-    const volantiniView = document.getElementById('volantini-view');
-    const flyersList = document.getElementById('flyers-list');
-
-    let allOffersData = [];
-    let offersLoaded = false;
-    let activeMarketFilter = 'all';
-
-    if (viewListBtn && viewOffersBtn && viewFlyersBtn) {
-        viewListBtn.addEventListener('click', () => {
-            viewListBtn.classList.add('active');
-            viewOffersBtn.classList.remove('active');
-            viewFlyersBtn.classList.remove('active');
-            listView.classList.remove('hidden');
-            offersView.classList.add('hidden');
-            volantiniView.classList.add('hidden');
-        });
-
-        viewOffersBtn.addEventListener('click', () => {
-            viewOffersBtn.classList.add('active');
-            viewListBtn.classList.remove('active');
-            viewFlyersBtn.classList.remove('active');
-            offersView.classList.remove('hidden');
-            listView.classList.add('hidden');
-            volantiniView.classList.add('hidden');
-            if (!offersLoaded) loadOffers();
-        });
-
-        viewFlyersBtn.addEventListener('click', () => {
-            viewFlyersBtn.classList.add('active');
-            viewListBtn.classList.remove('active');
-            viewOffersBtn.classList.remove('active');
-            volantiniView.classList.remove('hidden');
-            listView.classList.add('hidden');
-            offersView.classList.add('hidden');
-            renderFlyers();
-        });
-    }
-
-    // Filtri supermercato
-    document.getElementById('offers-filters')?.addEventListener('click', (e) => {
-        const chip = e.target.closest('.filter-chip');
-        if (!chip) return;
-        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        activeMarketFilter = chip.dataset.market;
-        renderOffers(allOffersData);
-    });
-
-    // Pulsante aggiorna
-    offersRefreshBtn?.addEventListener('click', () => {
-        offersLoaded = false;
-        offersList.innerHTML = '';
-        if (personalizedList) personalizedList.innerHTML = '';
-        if (personalizedSection) personalizedSection.classList.add('hidden');
-        loadOffers();
-    });
-
-    // Determina se un'offerta è "per te" confrontando il keyword con il catalogo frequente
-    function isPersonalized(offer) {
-        const keyword = (offer.keyword || '').toLowerCase();
-        const productName = offer.product.toLowerCase();
-        // Controlla se il catalogo ha elementi con alta frequenza che matchano
-        const frequentItems = catalog.filter(c => (c.frequency || 0) >= 1);
-        return frequentItems.some(item => {
-            const n = item.name.toLowerCase();
-            return n.includes(keyword) || keyword.includes(n.split(' ')[0]) ||
-                   n.includes(productName.split(' ')[0]) ||
-                   productName.includes(n.split(' ')[0]);
-        });
-    }
-
-    function createOfferCard(offer, isForYou) {
-        const li = document.createElement('li');
-        li.className = 'offer-item';
-        
-        const imgUrl = getProductImage(offer.keyword, offer.product);
-        const mediaHtml = imgUrl 
-            ? `<img src="${imgUrl}" alt="${offer.product}">`
-            : `<div class="offer-placeholder-icon">${offer.icon || '🛒'}</div>`;
-
-        const discountHtml = offer.discount
-            ? `<div class="offer-discount-badge" style="position: absolute; top: 16px; right: 16px; background: var(--danger-color); color: white; padding: 4px 10px; border-radius: 20px; font-weight: 800; font-size: 12px;">-${offer.discount}%</div>`
-            : '';
-        
-        const forYouTag = isForYou
-            ? `<div style="position: absolute; bottom: 10px; left: 16px; background: rgba(0,0,0,0.7); color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700;">⭐ CONSIGLIATO</div>`
-            : '';
-
-        li.innerHTML = `
-            <div class="offer-image-container">
-                <span class="offer-badge-market" data-market="${offer.supermarketKey || ''}">${offer.supermarket}</span>
-                ${mediaHtml}
-                ${discountHtml}
-                ${forYouTag}
-            </div>
-            <div class="offer-details">
-                <div class="offer-product">${offer.product}</div>
-                <div class="offer-location">${offer.location || ''}</div>
-                <div class="offer-footer">
-                    <div class="offer-price-group">
-                        <div class="offer-price-current">€${Number(offer.price).toFixed(2)}</div>
-                        ${offer.originalPrice ? `<div class="offer-price-original">€${offer.originalPrice.toFixed(2)}</div>` : ''}
-                    </div>
-                    <div class="offer-add-action">+</div>
-                </div>
-            </div>
-        `;
-
-        li.addEventListener('click', () => {
-            const added = getOrCreateCatalogItem(offer.product);
-            added.price = parseFloat(offer.price);
-            added.icon = offer.icon || '🛒';
-
-            if (!shoppingList.some(i => i.name.toLowerCase() === added.name.toLowerCase())) {
-                added.frequency = (added.frequency || 0) + 1;
-                shoppingList.push({ ...added, id: Date.now(), completed: false });
-                saveState();
-                renderList();
-                showToast('✅ ' + offer.product + ' aggiunto!');
-            } else {
-                showToast('⚠️ Già nella lista!');
-            }
-        });
-
-        return li;
-    }
-
-    function renderOffers(offers) {
-        if (!offersList) return;
-
-        // Filtra per supermercato
-        const filtered = activeMarketFilter === 'all'
-            ? offers
-            : offers.filter(o => o.supermarketKey === activeMarketFilter);
-
-        // Separa consigliate
-        const personalized = filtered.filter(o => isPersonalized(o));
-        const rest = filtered.filter(o => !isPersonalized(o));
-
-        // Sezione "Consigliate per te"
-        if (personalizedList && personalizedSection) {
-            personalizedList.innerHTML = '';
-            if (personalized.length > 0) {
-                personalizedSection.classList.remove('hidden');
-                personalized.forEach(o => personalizedList.appendChild(createOfferCard(o, true)));
-            } else {
-                personalizedSection.classList.add('hidden');
-            }
-        }
-
-        // Tutte le offerte (esclude le personalizzate se mostrate sopra)
-        offersList.innerHTML = '';
-        if (filtered.length === 0) {
-            offersList.innerHTML = `
-                <div class="offers-empty-state">
-                    <div class="empty-icon">🔍</div>
-                    <p>Nessuna offerta trovata<br>per questo supermercato.</p>
-                </div>`;
-            if (allOffersTitle) allOffersTitle.textContent = '📋 Tutte le Offerte';
-            return;
-        }
-
-        if (allOffersTitle) {
-            allOffersTitle.textContent = personalized.length > 0 ? '📋 Altre Offerte' : '📋 Tutte le Offerte';
-        }
-
-        if (rest.length === 0 && personalized.length > 0) {
-            offersList.innerHTML = `<div class="offers-empty-state" style="padding: 20px 0;"><p>Tutte le offerte disponibili<br>sono già nei tuoi consigli!</p></div>`;
+            suggestionsEl.classList.remove('hidden');
         } else {
-            rest.forEach(o => offersList.appendChild(createOfferCard(o, false)));
+            suggestionsEl.classList.add('hidden');
         }
-    }
+    });
 
-    async function renderFlyers() {
-        if (!flyersList) return;
-        
-        flyersList.innerHTML = `
-            <div class="offers-empty-state">
-                <div class="empty-icon">⏳</div>
-                <p>Caricamento volantini...</p>
-            </div>`;
-            
-        try {
-            const res = await fetch('volantini.json?t=' + new Date().getTime());
-            if (!res.ok) throw new Error("File non trovato");
-            const data = await res.json();
-            const flyers = data.flyers || [];
-            
-            flyersList.innerHTML = '';
-            if (flyers.length === 0) {
-                flyersList.innerHTML = `<div class="offers-empty-state"><p>Nessun volantino disponibile.</p></div>`;
-                return;
-            }
-
-            flyers.forEach(f => {
-                const li = document.createElement('li');
-                li.className = 'offer-item';
-                li.innerHTML = `
-                    <div class="offer-icon-wrap">${f.icon || '📄'}</div>
-                    <div class="offer-info">
-                        <div class="offer-product">${f.name}</div>
-                        <div class="offer-location">Volantino della settimana</div>
-                    </div>
-                    <a href="${f.url}" target="_blank" class="flyer-btn">Apri</a>
-                `;
-                flyersList.appendChild(li);
-            });
-        } catch (e) {
-            console.log('Error loading flyers:', e);
-            // Fallback o messaggio di errore
-            flyersList.innerHTML = `
-                <div class="offers-empty-state">
-                    <div class="empty-icon">⚠️</div>
-                    <p>I volantini vengono aggiornati ogni martedì.<br>Controlla più tardi!</p>
-                </div>`;
-        }
-    }
-
-    async function loadOffers() {
-        if (offersList) {
-            offersList.innerHTML = `
-                <div class="offers-empty-state">
-                    <div class="empty-icon">⏳</div>
-                    <p>Caricamento offerte...</p>
-                </div>`;
-        }
-        if (offersValidityEl) offersValidityEl.textContent = 'Aggiornamento...';
-
-        try {
-            const res = await fetch('offerte.json?t=' + new Date().getTime());
-            if (!res.ok) throw new Error("File non trovato");
-            const data = await res.json();
-
-            allOffersData = data.offers || [];
-
-            // Mostra validità
-            if (offersValidityEl && data.validFrom && data.validTo) {
-                const from = new Date(data.validFrom).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
-                const to = new Date(data.validTo).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
-                offersValidityEl.textContent = `Valide dal ${from} al ${to} · ${allOffersData.length} offerte`;
-            } else if (offersValidityEl) {
-                offersValidityEl.textContent = `${allOffersData.length} offerte disponibili`;
-            }
-
-            renderOffers(allOffersData);
-            offersLoaded = true;
-
-        } catch (e) {
-            console.log('Error loading offers:', e);
-            if (offersList) {
-                offersList.innerHTML = `
-                    <div class="offers-empty-state">
-                        <div class="empty-icon">⚠️</div>
-                        <p>Impossibile caricare le offerte.<br>
-                        <a href="https://www.promoqui.it/volantino/lidl" target="_blank" style="color: var(--accent-color);">Apri Promoqui</a>
-                        </p>
-                    </div>`;
-            }
-            if (offersValidityEl) offersValidityEl.textContent = 'Errore caricamento';
-        }
-    }
-
-    // Inizializza UI
-    renderList();
-
-    // === PWA & iOS Logic ===
-    const isIos = () => {
-        const userAgent = window.navigator.userAgent.toLowerCase();
-        return /iphone|ipad|ipod/.test(userAgent);
-    };
-
-    const isStandalone = () => {
-        return ('standalone' in window.navigator) && (window.navigator.standalone) || window.matchMedia('(display-mode: standalone)').matches;
-    };
-
-    const installBtn = document.getElementById('pwa-install-btn');
-    const notifyBtn = document.getElementById('pwa-notify-btn');
-    const iosModal = document.getElementById('ios-install-modal');
-    const closeModalBtn = document.getElementById('close-ios-modal');
-    
-    // Elementi del nuovo banner di installazione
-    const pwaBanner = document.getElementById('pwa-banner');
-    const pwaBannerInstallBtn = document.getElementById('pwa-banner-install-btn');
-    const pwaBannerCloseBtn = document.getElementById('pwa-banner-close-btn');
-
-    let deferredPrompt = null;
-
-    // Gestione Banner PWA
-    if (pwaBanner) {
-        if (!isStandalone() && !localStorage.getItem('spesa_pwa_banner_dismissed')) {
-            // Piccolo ritardo per mostrare il banner in modo più elegante
-            setTimeout(() => {
-                pwaBanner.classList.remove('hidden');
-            }, 2000);
+    // Predictive & Flyers Mock Logic
+    function loadDashboardData() {
+        // Mock Finiti
+        if (predictiveListEl) {
+            predictiveListEl.innerHTML = `
+                <li class="predictive-item-small" onclick="document.getElementById('food-input').value='Uova'; document.getElementById('add-fab').click();">
+                    <span class="predictive-icon">🥚</span> <span class="predictive-name" style="color:white;">Uova?</span>
+                </li>
+                <li class="predictive-item-small" onclick="document.getElementById('food-input').value='Caffè'; document.getElementById('add-fab').click();">
+                    <span class="predictive-icon">☕</span> <span class="predictive-name" style="color:white;">Caffè?</span>
+                </li>
+            `;
         }
 
-        pwaBannerCloseBtn?.addEventListener('click', () => {
-            pwaBanner.classList.add('hidden');
-            localStorage.setItem('spesa_pwa_banner_dismissed', 'true');
-        });
-
-        pwaBannerInstallBtn?.addEventListener('click', () => {
-            if (isIos()) {
-                if (iosModal) iosModal.classList.remove('hidden');
-            } else if (deferredPrompt) {
-                pwaBanner.classList.add('hidden');
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then(() => {
-                    deferredPrompt = null;
-                });
-            } else {
-                // Fallback: mostra istruzioni generiche se non c'è deferredPrompt
-                showToast('ℹ️ Clicca sui tre puntini in alto a destra e seleziona "Aggiungi a schermata Home"');
-            }
-        });
-    }
-
-    // Registra Service Worker
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').catch(err => {
-                console.log('SW registration failed: ', err);
-            });
-        });
-    }
-
-    if (isIos()) {
-        if (!isStandalone()) {
-            // Siamo su Safari in iOS, mostra anche il pulsante in alto
-            if (installBtn) installBtn.classList.remove('hidden');
-            
-            if (installBtn) {
-                installBtn.addEventListener('click', () => {
-                    if (iosModal) iosModal.classList.remove('hidden');
-                });
-            }
-            
-            if (closeModalBtn) {
-                closeModalBtn.addEventListener('click', () => {
-                    if (iosModal) iosModal.classList.add('hidden');
-                });
-            }
-        }
-    } else {
-        // Logica Android/Chrome
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            
-            // Mostra il pulsante nella barra se presente
-            if (installBtn) installBtn.classList.remove('hidden');
-            
-            installBtn?.addEventListener('click', () => {
-                installBtn.classList.add('hidden');
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then(() => {
-                    deferredPrompt = null;
-                });
-            });
-        });
-    }
-
-    // === GESTIONE PERMESSI NOTIFICHE (BANNER) ===
-    const notificationBanner = document.getElementById('notification-banner');
-    const enableNotificationsBtn = document.getElementById('enable-notifications-btn');
-    const dismissNotificationsBtn = document.getElementById('dismiss-notifications-btn');
-
-    if (notificationBanner && 'Notification' in window) {
-        if (Notification.permission === 'default' && !localStorage.getItem('spesa_notifications_dismissed')) {
-            notificationBanner.classList.remove('hidden');
-        }
-
-        enableNotificationsBtn?.addEventListener('click', () => {
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    showToast('🔔 Notifiche attivate!');
-                    notificationBanner.classList.add('hidden');
-                }
-            });
-        });
-
-        dismissNotificationsBtn?.addEventListener('click', () => {
-            notificationBanner.classList.add('hidden');
-            localStorage.setItem('spesa_notifications_dismissed', 'true');
-        });
-    }
-
-    // === ALGORITMO PREDITTIVO ===
-    function checkPredictiveAlerts() {
-        const predictiveSection = document.getElementById('predictive-section');
-        const predictiveList = document.getElementById('predictive-list');
-        if (!predictiveSection || !predictiveList) return;
-
-        predictiveList.innerHTML = '';
-        let foundSuggestions = false;
-
-        const now = Date.now();
-        const oneDayMs = 24 * 60 * 60 * 1000;
-
-        catalog.forEach(item => {
-            if (item.purchaseDates && item.purchaseDates.length >= 2) {
-                // Calcola intervallo medio
-                let totalDiff = 0;
-                for (let i = 1; i < item.purchaseDates.length; i++) {
-                    totalDiff += (item.purchaseDates[i] - item.purchaseDates[i-1]);
-                }
-                const avgInterval = totalDiff / (item.purchaseDates.length - 1);
-                
-                const lastPurchase = item.purchaseDates[item.purchaseDates.length - 1];
-                const timeSinceLast = now - lastPurchase;
-
-                // Se è passato più del tempo medio + 1 giorno e l'item non è già nella lista spesa
-                if (timeSinceLast > (avgInterval + oneDayMs) && !shoppingList.some(slItem => slItem.name.toLowerCase() === item.name.toLowerCase())) {
-                    
-                    // Invia notifica predittiva (se non è stata inviata di recente)
-                    const lastAlertKey = 'spesa_alert_' + item.name;
-                    const lastAlertTime = parseInt(localStorage.getItem(lastAlertKey)) || 0;
-                    if (now - lastAlertTime > oneDayMs * 2) { // Non spammare (max 1 ogni 2 giorni per item)
-                        sendLocalNotification('💡 Forse è finito?', {
-                            body: `Sembra che '${item.name}' stia per finire! Vuoi aggiungerlo alla lista?`,
-                            icon: 'icon.png',
-                            badge: 'icon.png',
-                            actions: [
-                                { action: 'add_item', title: 'Aggiungi ora' }
-                            ],
-                            data: { itemName: item.name }
+        // Carica Volantini dal JSON
+        if (flyersListEl) {
+            fetch('volantini.json?t=' + Date.now())
+                .then(r => r.json())
+                .then(data => {
+                    flyersListEl.innerHTML = '';
+                    if (data.flyers && data.flyers.length > 0) {
+                        data.flyers.forEach(f => {
+                            flyersListEl.innerHTML += `
+                                <li class="flyer-card" onclick="window.open('${f.url}', '_blank')">
+                                    <div class="flyer-img">
+                                        <div class="flyer-market-badge">${f.icon}</div>
+                                        <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #FFED4A 0%, #F59E0B 100%);"></div>
+                                    </div>
+                                    <div class="flyer-info">
+                                        <div class="flyer-title">${f.name}</div>
+                                        <div style="font-size:10px; color:var(--text-secondary);">Clicca per aprire</div>
+                                    </div>
+                                </li>
+                            `;
                         });
-                        localStorage.setItem(lastAlertKey, now.toString());
                     }
-
-                    // Aggiungi alla UI
-                    foundSuggestions = true;
-                    const li = document.createElement('li');
-                    li.className = 'predictive-item';
-                    const icon = item.icon || guessIcon(item.name);
-                    li.innerHTML = `
-                        <div class="predictive-icon">${icon}</div>
-                        <div class="predictive-info"><div class="predictive-name">${item.name}</div></div>
-                        <button class="predictive-add-btn">+</button>
-                    `;
-                    li.querySelector('.predictive-add-btn').addEventListener('click', () => {
-                        addToList(item.name);
-                        checkPredictiveAlerts(); // Aggiorna i suggerimenti
-                    });
-                    predictiveList.appendChild(li);
-                }
-            }
-        });
-
-        if (foundSuggestions) {
-            predictiveSection.classList.remove('hidden');
-        } else {
-            predictiveSection.classList.add('hidden');
+                })
+                .catch(() => {
+                    flyersListEl.innerHTML = '<li style="color:white; padding: 20px;">Nessun volantino</li>';
+                });
         }
     }
 
-    // Esegui controllo predittivo all'avvio
-    setTimeout(checkPredictiveAlerts, 1500);
+    // Inizializzazione
+    renderList();
+    loadDashboardData();
 
-});
+}); // fine DOMContentLoaded
