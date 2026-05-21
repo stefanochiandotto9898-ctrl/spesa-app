@@ -1,143 +1,888 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Spesa">
-    <title>La Mia Spesa</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon.png">
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>La Mia Spesa</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0A0F1E;
+  --card: #141B2D;
+  --card2: #1C2540;
+  --border: #252E45;
+  --green: #2EE59D;
+  --green-dim: rgba(46,229,157,0.12);
+  --orange: #FF8C42;
+  --blue: #4A9FFF;
+  --pink: #FF6B9D;
+  --text: #F0F4FF;
+  --muted: #5A6680;
+  --muted2: #8892AA;
+  --r: 20px;
+  --rm: 14px;
+}
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html, body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  width: 100vw; height: 100vh; height: 100dvh;
+  overflow: hidden;
+  display: flex; justify-content: center;
+}
+.app {
+  width: 100%; max-width: 450px;
+  height: 100%; display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+}
+
+/* ── PAGES ── */
+.page {
+  position: absolute; top: 0; left: 0; right: 0;
+  bottom: 80px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  transition: opacity .25s, transform .25s;
+  opacity: 0; pointer-events: none; transform: translateY(12px);
+}
+.page.active { opacity:1; pointer-events:all; transform: translateY(0); }
+.page::-webkit-scrollbar { display:none; }
+
+/* ── BOTTOM NAV ── */
+.nav {
+  position: fixed; bottom:0; left:50%; transform:translateX(-50%);
+  width:100%; max-width:450px; height:80px;
+  background: #080D1A;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: space-around; align-items: center;
+  padding: 0 8px 16px; z-index: 200;
+}
+.nav-btn {
+  background:none; border:none; color:var(--muted);
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  cursor:pointer; transition: color .2s; font-size:10px;
+  font-family:'DM Sans',sans-serif; letter-spacing:.3px; padding:4px 12px;
+}
+.nav-btn svg { transition: transform .2s; }
+.nav-btn.active { color:var(--green); }
+.nav-btn.active svg { transform: scale(1.1); }
+.fab-btn {
+  width:58px; height:58px; border-radius:50%;
+  background: linear-gradient(135deg, #2EE59D, #1BC97E);
+  border:none; color:#0A0F1E;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; margin-top:-20px;
+  box-shadow: 0 4px 24px rgba(46,229,157,.35);
+  transition: transform .15s, box-shadow .15s;
+}
+.fab-btn:active { transform:scale(.92); box-shadow: 0 2px 12px rgba(46,229,157,.2); }
+
+/* ── HOME PAGE ── */
+.home-header {
+  padding: 52px 20px 16px;
+  display: flex; justify-content:space-between; align-items:flex-start;
+}
+.home-greeting { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; line-height:1.2; }
+.home-greeting span { color:var(--green); }
+.home-sub { color:var(--muted2); font-size:13px; margin-top:4px; }
+.savings-pill {
+  background:var(--green-dim); border:1px solid rgba(46,229,157,.2);
+  border-radius:30px; padding:6px 14px;
+  display:flex; flex-direction:column; align-items:center;
+}
+.savings-pill .lbl { font-size:9px; color:var(--green); font-weight:600; letter-spacing:.8px; text-transform:uppercase; }
+.savings-pill .amt { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:var(--green); }
+
+.section-title {
+  font-family:'Syne',sans-serif; font-size:11px; font-weight:700;
+  color:var(--muted); letter-spacing:1.5px; text-transform:uppercase;
+  padding: 0 20px; margin-bottom:10px;
+}
+.home-cards { padding: 0 20px; display:flex; flex-direction:column; gap:14px; margin-bottom:20px; }
+
+/* Lista items */
+.list-empty {
+  text-align:center; color:var(--muted); padding:40px 20px;
+  font-size:15px; line-height:1.6;
+}
+.list-item {
+  background:var(--card); border-radius:var(--rm);
+  display:flex; align-items:center; gap:12px;
+  padding:14px 16px; border:1px solid var(--border);
+  transition: opacity .3s, transform .2s;
+  cursor:pointer;
+}
+.list-item.done { opacity:.45; }
+.list-item.done .item-name { text-decoration:line-through; }
+.item-check {
+  width:24px; height:24px; border-radius:50%;
+  border:2px solid var(--muted); flex-shrink:0;
+  transition:all .2s; display:flex; align-items:center; justify-content:center;
+}
+.list-item.done .item-check { background:var(--green); border-color:var(--green); }
+.item-icon { font-size:22px; flex-shrink:0; }
+.item-info { flex:1; min-width:0; }
+.item-name { font-size:15px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.item-cat { font-size:11px; color:var(--muted2); margin-top:2px; }
+.item-price {
+  font-family:'Syne',sans-serif; font-size:13px; font-weight:700;
+  color:var(--muted2); flex-shrink:0;
+}
+.item-del {
+  background:none; border:none; color:var(--muted); cursor:pointer;
+  padding:4px; font-size:18px; line-height:1;
+  transition:color .2s;
+}
+.item-del:hover { color:#ff4f6a; }
+
+/* Predictive */
+.pred-card {
+  background:var(--card); border-radius:var(--r);
+  padding:16px 20px; border:1px solid var(--border);
+}
+.pred-card h3 { font-family:'Syne',sans-serif; font-size:11px; font-weight:700; color:var(--muted); letter-spacing:1.2px; text-transform:uppercase; margin-bottom:12px; }
+.pred-chips { display:flex; flex-wrap:wrap; gap:8px; }
+.pred-chip {
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:30px; padding:7px 14px;
+  font-size:13px; cursor:pointer; transition:all .2s;
+  display:flex; align-items:center; gap:6px;
+}
+.pred-chip:hover { border-color:var(--green); color:var(--green); }
+
+/* total card */
+.total-card {
+  background: linear-gradient(135deg, #1C2540, #141B2D);
+  border-radius:var(--r); padding:16px 20px;
+  border:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.total-label { font-size:12px; color:var(--muted2); margin-bottom:4px; }
+.total-amount { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--green); }
+.total-items { font-size:12px; color:var(--muted2); margin-top:2px; }
+.total-icon { font-size:36px; opacity:.4; }
+
+/* ── CARRELLO (stats) ── */
+.cart-header { padding:52px 20px 20px; }
+.cart-title { font-family:'Syne',sans-serif; font-size:26px; font-weight:800; }
+.cart-sub { color:var(--muted2); font-size:13px; margin-top:4px; }
+.stat-list { padding:0 20px; display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+.stat-item {
+  background:var(--card); border-radius:var(--rm);
+  padding:14px 16px; border:1px solid var(--border);
+  display:flex; align-items:center; gap:14px;
+}
+.stat-rank {
+  font-family:'Syne',sans-serif; font-size:13px; font-weight:800;
+  color:var(--muted); width:22px; text-align:center; flex-shrink:0;
+}
+.stat-rank.gold { color:#FFD700; }
+.stat-rank.silver { color:#C0C0C0; }
+.stat-rank.bronze { color:#CD7F32; }
+.stat-icon { font-size:24px; flex-shrink:0; }
+.stat-info { flex:1; min-width:0; }
+.stat-name { font-size:14px; font-weight:500; }
+.stat-bar-wrap { margin-top:6px; height:3px; background:var(--border); border-radius:3px; overflow:hidden; }
+.stat-bar { height:100%; background: linear-gradient(90deg, var(--green), var(--blue)); border-radius:3px; transition:width .6s ease; }
+.stat-count {
+  font-family:'Syne',sans-serif; font-size:13px; font-weight:700;
+  color:var(--muted2); flex-shrink:0;
+}
+.cart-empty { text-align:center; color:var(--muted); padding:60px 20px; font-size:15px; line-height:1.7; }
+
+/* ── ESPLORA ── */
+.esplora-header { padding:52px 20px 20px; }
+.esplora-title { font-family:'Syne',sans-serif; font-size:26px; font-weight:800; }
+.esplora-sub { color:var(--muted2); font-size:13px; margin-top:4px; }
+.supermercati { padding:0 20px; display:flex; flex-direction:column; gap:12px; margin-bottom:24px; }
+.super-card {
+  background:var(--card); border-radius:var(--r);
+  border:1px solid var(--border); overflow:hidden;
+  text-decoration:none; color:inherit;
+  display:flex; align-items:stretch;
+  transition:border-color .2s, transform .15s;
+  cursor:pointer;
+}
+.super-card:active { transform:scale(.98); }
+.super-card:hover { border-color:var(--green); }
+.super-accent {
+  width:6px; flex-shrink:0;
+}
+.super-body { padding:16px 18px; flex:1; }
+.super-emoji { font-size:28px; margin-bottom:8px; display:block; }
+.super-name { font-family:'Syne',sans-serif; font-size:16px; font-weight:800; }
+.super-desc { font-size:12px; color:var(--muted2); margin-top:3px; line-height:1.4; }
+.super-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.super-tag {
+  font-size:10px; font-weight:600; letter-spacing:.5px; text-transform:uppercase;
+  padding:3px 9px; border-radius:20px;
+  background:var(--card2); color:var(--muted2);
+}
+.super-arrow {
+  display:flex; align-items:center; padding:0 16px;
+  color:var(--muted); font-size:18px;
+}
+.esplora-section-title {
+  font-family:'Syne',sans-serif; font-size:11px; font-weight:700;
+  color:var(--muted); letter-spacing:1.5px; text-transform:uppercase;
+  padding: 0 20px; margin-bottom:12px;
+}
+
+/* ── PROFILO ── */
+.profile-header {
+  padding:52px 20px 24px;
+  text-align:center;
+}
+.profile-title { font-family:'Syne',sans-serif; font-size:26px; font-weight:800; }
+.avatars-row { display:flex; justify-content:center; gap:24px; margin-top:24px; }
+.profile-avatar-wrap { display:flex; flex-direction:column; align-items:center; gap:10px; }
+.profile-avatar {
+  width:80px; height:80px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Syne',sans-serif; font-size:32px; font-weight:800;
+  position:relative;
+}
+.profile-avatar.s { background:linear-gradient(135deg, #2EE59D, #1BC97E); color:#0A0F1E; }
+.profile-avatar.f { background:linear-gradient(135deg, #FF8C42, #E5651F); color:#fff; }
+.profile-avatar .online {
+  position:absolute; bottom:4px; right:4px;
+  width:14px; height:14px; border-radius:50%;
+  background:var(--green); border:2px solid var(--bg);
+}
+.profile-name { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; }
+.profile-role { font-size:12px; color:var(--muted2); }
+.profile-stats { display:flex; justify-content:center; gap:0; margin:24px 20px 0; }
+.pstat {
+  flex:1; text-align:center; padding:16px 0;
+  background:var(--card); border:1px solid var(--border);
+}
+.pstat:first-child { border-radius:var(--rm) 0 0 var(--rm); }
+.pstat:last-child { border-radius:0 var(--rm) var(--rm) 0; }
+.pstat:not(:first-child) { border-left:none; }
+.pstat-num { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:var(--green); }
+.pstat-lbl { font-size:10px; color:var(--muted2); margin-top:2px; letter-spacing:.5px; text-transform:uppercase; }
+.profile-actions { padding:20px; display:flex; flex-direction:column; gap:10px; }
+.paction {
+  background:var(--card); border-radius:var(--rm);
+  border:1px solid var(--border); padding:16px 18px;
+  display:flex; align-items:center; gap:14px;
+  cursor:pointer; transition:border-color .2s;
+}
+.paction:hover { border-color:var(--green); }
+.paction-icon { font-size:22px; width:36px; text-align:center; }
+.paction-text { flex:1; }
+.paction-title { font-size:15px; font-weight:500; }
+.paction-sub { font-size:11px; color:var(--muted2); margin-top:2px; }
+.paction-arrow { color:var(--muted); }
+
+/* ── MODAL AGGIUNGI ── */
+.modal-overlay {
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.75); backdrop-filter:blur(8px);
+  z-index:500; display:flex; align-items:flex-end;
+  opacity:0; pointer-events:none; transition:opacity .25s;
+}
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal-sheet {
+  width:100%; max-width:450px; margin:0 auto;
+  background:var(--card); border-radius:24px 24px 0 0;
+  padding:0 20px 40px;
+  transform:translateY(100%); transition:transform .3s cubic-bezier(.32,1.25,.5,1);
+}
+.modal-overlay.open .modal-sheet { transform:translateY(0); }
+.modal-handle {
+  width:40px; height:4px; border-radius:4px;
+  background:var(--border); margin:12px auto 20px;
+}
+.modal-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; margin-bottom:18px; }
+.input-row {
+  display:flex; align-items:center; gap:10px;
+  background:var(--card2); border-radius:var(--rm);
+  padding:6px 6px 6px 16px;
+  border:1.5px solid var(--border);
+  transition:border-color .2s;
+}
+.input-row:focus-within { border-color:var(--green); }
+.input-row input {
+  flex:1; background:none; border:none; outline:none;
+  color:var(--text); font-size:17px; font-family:'DM Sans',sans-serif;
+  padding:8px 0;
+}
+.input-row input::placeholder { color:var(--muted); }
+.input-add-btn {
+  width:44px; height:44px; border-radius:var(--rm);
+  background:var(--green); border:none; color:#0A0F1E;
+  font-size:22px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:transform .15s;
+}
+.input-add-btn:active { transform:scale(.9); }
+.suggestions {
+  list-style:none; margin-top:10px;
+  background:var(--card2); border-radius:var(--rm);
+  border:1px solid var(--border); overflow:hidden;
+  max-height:200px; overflow-y:auto;
+}
+.suggestions.hidden { display:none; }
+.suggestion-item {
+  padding:13px 16px; display:flex; align-items:center; gap:12px;
+  cursor:pointer; border-bottom:1px solid var(--border);
+  transition:background .15s;
+}
+.suggestion-item:last-child { border-bottom:none; }
+.suggestion-item:hover { background:var(--border); }
+.sug-icon { font-size:20px; }
+.sug-name { font-size:14px; }
+.modal-cancel {
+  width:100%; margin-top:14px;
+  background:none; border:1px solid var(--border);
+  border-radius:var(--rm); padding:14px;
+  color:var(--muted2); font-size:15px; font-family:'DM Sans',sans-serif;
+  cursor:pointer; transition:all .2s;
+}
+.modal-cancel:hover { border-color:var(--muted2); color:var(--text); }
+
+/* TOAST */
+.toast {
+  position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--text); color:var(--bg);
+  padding:12px 22px; border-radius:30px; font-size:13px; font-weight:600;
+  z-index:600; opacity:0; pointer-events:none; white-space:nowrap;
+  transition:all .3s cubic-bezier(.18,.89,.32,1.28);
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
 </head>
 <body>
-    <div class="app-container dark-dashboard">
-        <!-- Header -->
-        <header class="dashboard-header">
-            <div class="header-left">
-                <div class="avatars">
-                    <div class="avatar avatar-1">S</div>
-                    <div class="avatar avatar-2">F</div>
-                </div>
-                <div class="greeting">Ciao, Stefano e Francesca!</div>
-            </div>
-            <div class="header-right">
-                <div class="savings-card">
-                    <span class="savings-label">RISPARMIO MESE:</span>
-                    <span class="savings-amount">€45.20</span>
-                </div>
-            </div>
-        </header>
+<div class="app">
 
-        <!-- Main Dashboard Content -->
-        <div class="dashboard-content">
-            
-            <!-- LISTA CONDIVISA -->
-            <section class="dashboard-section shared-list-section">
-                <div class="section-header">
-                    <h2>LISTA CONDIVISA</h2>
-                    <button class="more-options">...</button>
-                </div>
-                <div class="shared-list-card">
-                    <ul id="shopping-list" class="new-shopping-list">
-                        <!-- Items generated via JS -->
-                    </ul>
-                </div>
-            </section>
-
-            <!-- MIDDLE GRID -->
-            <section class="dashboard-grid-2">
-                <!-- FORSE SONO FINITI -->
-                <div class="dashboard-card small-card predictive-card">
-                    <h3>FORSE SONO FINITI</h3>
-                    <div id="predictive-section">
-                        <ul id="predictive-list" class="predictive-content">
-                            <!-- Items generated via JS -->
-                        </ul>
-                    </div>
-                </div>
-                
-                <!-- TOTALE STIMATO -->
-                <div class="dashboard-card small-card total-card">
-                    <h3 style="display:flex; justify-content:space-between;">TOTALE STIMATO: <span id="total-amount">€0.00</span></h3>
-                    <div class="total-subtitle">Dettagli Spese</div>
-                    <div class="chart-mockup">
-                        <svg viewBox="0 0 100 30" class="sparkline" preserveAspectRatio="none" style="width:100%; height:40px;">
-                            <path d="M0,25 L20,15 L40,20 L60,10 L80,15 L100,5" fill="none" stroke="var(--chart-color)" stroke-width="2"/>
-                            <path d="M0,25 L20,15 L40,20 L60,10 L80,15 L100,5 L100,30 L0,30 Z" fill="url(#grad)" stroke="none" opacity="0.3"/>
-                            <defs>
-                                <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stop-color="var(--chart-color)" stop-opacity="0.8"/>
-                                    <stop offset="100%" stop-color="var(--chart-color)" stop-opacity="0"/>
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                    </div>
-                </div>
-            </section>
-
-            <!-- VOLANTINI E OFFERTE -->
-            <section class="dashboard-section flyers-section">
-                <div class="section-header">
-                    <h2>VOLANTINI E OFFERTE</h2>
-                    <div class="nav-arrows">
-                        <button>&lt;</button>
-                        <button>&gt;</button>
-                    </div>
-                </div>
-                <div class="flyers-carousel">
-                    <ul id="flyers-list" class="horizontal-list">
-                        <!-- Flyers generated via JS -->
-                    </ul>
-                </div>
-            </section>
-
-        </div> <!-- /dashboard-content -->
-
-        <!-- Bottom Navigation -->
-        <nav class="bottom-nav">
-            <button class="nav-item active">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-            </button>
-            <button class="nav-item">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
-            </button>
-            
-            <div class="fab-wrapper">
-                <button id="add-fab" class="fab">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                </button>
-                <div class="fab-label">Aggiungi Prodotto</div>
-            </div>
-
-            <button class="nav-item">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-            </button>
-            <button class="nav-item">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-            </button>
-        </nav>
-
-        <!-- Modals -->
-        <div id="add-item-modal" class="modal-backdrop hidden">
-            <div class="ios-modal-content add-modal" style="background: var(--bg-dashboard); color: white; border: 1px solid var(--border-dark);">
-                <h3 style="color: white;">Aggiungi alla lista</h3>
-                <div class="input-wrapper" style="background: var(--card-bg); border-color: var(--border-dark);">
-                    <input type="text" id="food-input" placeholder="Cosa ti serve?" autocomplete="off" style="color: white;">
-                    <button id="add-btn" class="add-btn" style="background: var(--accent-green);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M12 5V19M5 12H19" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                </div>
-                <ul id="suggestions" class="suggestions-list hidden" style="background: var(--card-bg); border-color: var(--border-dark); max-height: 200px;"></ul>
-                <button id="close-add-modal" class="modal-close-btn" style="margin-top: 15px; background: rgba(255,255,255,0.1); color: white;">Annulla</button>
-            </div>
-        </div>
-        
-        <div id="pwa-banner" class="hidden"></div>
-        <div id="notification-banner" class="hidden"></div>
+  <!-- ── HOME ── -->
+  <div class="page active" id="page-home">
+    <div class="home-header">
+      <div>
+        <div class="home-greeting">Ciao, <span>Stefano</span><br>e Francesca!</div>
+        <div class="home-sub" id="home-sub">Lista condivisa</div>
+      </div>
+      <div class="savings-pill">
+        <span class="lbl">Risparmio</span>
+        <span class="amt">€45.20</span>
+      </div>
     </div>
 
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-    <script src="script.js"></script>
+    <!-- Total card -->
+    <div style="padding:0 20px; margin-bottom:16px;">
+      <div class="total-card">
+        <div>
+          <div class="total-label">Totale stimato</div>
+          <div class="total-amount" id="home-total">€0.00</div>
+          <div class="total-items" id="home-count">0 prodotti in lista</div>
+        </div>
+        <div class="total-icon">🛒</div>
+      </div>
+    </div>
+
+    <!-- Suggeriti -->
+    <div id="pred-section" style="padding:0 20px; margin-bottom:16px; display:none;">
+      <div class="pred-card">
+        <h3>Forse sono finiti</h3>
+        <div class="pred-chips" id="pred-chips"></div>
+      </div>
+    </div>
+
+    <div class="section-title">LISTA CONDIVISA</div>
+    <div class="home-cards" id="home-list">
+      <div class="list-empty" id="home-empty">
+        Nessun prodotto in lista.<br>Premi <b>+</b> per aggiungere qualcosa!
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CARRELLO (stats) ── -->
+  <div class="page" id="page-cart">
+    <div class="cart-header">
+      <div class="cart-title">Statistiche</div>
+      <div class="cart-sub">Prodotti più comprati</div>
+    </div>
+    <div class="stat-list" id="stat-list">
+      <div class="cart-empty">Nessun prodotto ancora.<br>Inizia ad aggiungere prodotti alla lista!</div>
+    </div>
+  </div>
+
+  <!-- ── ESPLORA ── -->
+  <div class="page" id="page-esplora">
+    <div class="esplora-header">
+      <div class="esplora-title">Esplora</div>
+      <div class="esplora-sub">I tuoi supermercati preferiti</div>
+    </div>
+    <div class="esplora-section-title">SUPERMERCATI VICINI</div>
+    <div class="supermercati" id="supermercati-list"></div>
+  </div>
+
+  <!-- ── PROFILO ── -->
+  <div class="page" id="page-profile">
+    <div class="profile-header">
+      <div class="profile-title">Profilo</div>
+      <div class="avatars-row">
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar s">S<div class="online"></div></div>
+          <div class="profile-name">Stefano</div>
+          <div class="profile-role">Admin lista</div>
+        </div>
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar f">F</div>
+          <div class="profile-name">Francesca</div>
+          <div class="profile-role">Collaboratore</div>
+        </div>
+      </div>
+    </div>
+    <div class="profile-stats" id="profile-stats">
+      <div class="pstat"><div class="pstat-num" id="ps-totprodotti">0</div><div class="pstat-lbl">Prodotti</div></div>
+      <div class="pstat"><div class="pstat-num" id="ps-acquisti">0</div><div class="pstat-lbl">Acquisti</div></div>
+      <div class="pstat"><div class="pstat-num" id="ps-categorie">0</div><div class="pstat-lbl">Categorie</div></div>
+    </div>
+    <div class="profile-actions">
+      <div class="paction" onclick="clearList()">
+        <span class="paction-icon">🗑️</span>
+        <div class="paction-text">
+          <div class="paction-title">Svuota lista</div>
+          <div class="paction-sub">Rimuovi tutti i prodotti dalla lista</div>
+        </div>
+        <span class="paction-arrow">›</span>
+      </div>
+      <div class="paction" onclick="resetStats()">
+        <span class="paction-icon">📊</span>
+        <div class="paction-text">
+          <div class="paction-title">Azzera statistiche</div>
+          <div class="paction-sub">Ricomincia il conteggio da zero</div>
+        </div>
+        <span class="paction-arrow">›</span>
+      </div>
+      <div class="paction" onclick="goToVolantini()">
+        <span class="paction-icon">📰</span>
+        <div class="paction-text">
+          <div class="paction-title">Volantini offerte</div>
+          <div class="paction-sub">Vai alla sezione Esplora</div>
+        </div>
+        <span class="paction-arrow">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL AGGIUNGI ── -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Aggiungi alla lista</div>
+      <div class="input-row">
+        <input type="text" id="food-input" placeholder="Cosa ti serve?" autocomplete="off" autocorrect="off">
+        <button class="input-add-btn" id="add-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+      <ul class="suggestions hidden" id="suggestions"></ul>
+      <button class="modal-cancel" id="modal-cancel">Annulla</button>
+    </div>
+  </div>
+
+  <!-- ── BOTTOM NAV ── -->
+  <nav class="nav">
+    <button class="nav-btn active" data-page="home">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button class="nav-btn" data-page="esplora">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+      Esplora
+    </button>
+    <button class="fab-btn" id="fab">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <button class="nav-btn" data-page="cart">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      Carrello
+    </button>
+    <button class="nav-btn" data-page="profile">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profilo
+    </button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ── DATI ──────────────────────────────────────────
+let catalog = JSON.parse(localStorage.getItem('spesa_catalog_v2')) || [];
+let shoppingList = JSON.parse(localStorage.getItem('spesa_list_v2')) || [];
+
+const SUPERMARKETS = [
+  {
+    name: 'IperVisotto',
+    emoji: '🛒',
+    desc: 'Supermercato locale di fiducia a Portogruaro. Grande scelta di prodotti freschi.',
+    tags: ['Fresco', 'Locale', 'Offerte'],
+    url: 'https://supermercativisotto.it/volantino',
+    color: '#2EE59D'
+  },
+  {
+    name: 'Lidl',
+    emoji: '🍋',
+    desc: 'Qualità tedesca a prezzi competitivi. Ottimo per biologico e specialty.',
+    tags: ['Bio', 'Convenienza', 'Settimanale'],
+    url: 'https://www.lidl.it/c/volantino-online/s10022792',
+    color: '#FFD700'
+  },
+  {
+    name: 'Conad',
+    emoji: '🌼',
+    desc: 'Ampia scelta, ottima per prodotti a marchio. Punti fedeltà vantaggiosi.',
+    tags: ['Punti', 'Marchio proprio', 'Qualità'],
+    url: 'https://www.conad.it/ricerca-negozi/negozio.005118.html',
+    color: '#FF6B9D'
+  },
+  {
+    name: 'Dpiù',
+    emoji: '➕',
+    desc: 'Prezzi bassi e promozioni continue. Perfetto per fare scorta.',
+    tags: ['Risparmio', 'Scorte', 'Offerte'],
+    url: 'https://www.volantinofacile.it/dpiu/volantino-dpiu/portogruaro',
+    color: '#4A9FFF'
+  },
+  {
+    name: 'Despar',
+    emoji: '🌲',
+    desc: 'Comodo e ben fornito. Volantino aggiornato ogni settimana.',
+    tags: ['Comodo', 'Settimanale'],
+    url: 'https://www.volantinofacile.it/despar/portogruaro',
+    color: '#FF8C42'
+  }
+];
+
+// ── ICON + CATEGORY ───────────────────────────────
+function guessIcon(name) {
+  const n = name.toLowerCase();
+  if(n.includes('pollo')||n.includes('carne')||n.includes('tacch')) return '🍗';
+  if(n.includes('pesce')||n.includes('tonno')||n.includes('salmone')) return '🐟';
+  if(n.includes('mela')||n.includes('frutta')) return '🍎';
+  if(n.includes('banana')) return '🍌';
+  if(n.includes('verdura')||n.includes('insalata')||n.includes('broccoli')) return '🥦';
+  if(n.includes('pomodor')) return '🍅';
+  if(n.includes('carota')) return '🥕';
+  if(n.includes('cipolla')||n.includes('aglio')) return '🧅';
+  if(n.includes('latte')) return '🥛';
+  if(n.includes('yogurt')) return '🫙';
+  if(n.includes('formaggio')||n.includes('burro')) return '🧀';
+  if(n.includes('uova')||n.includes('uovo')) return '🥚';
+  if(n.includes('pane')||n.includes('baguette')||n.includes('filone')) return '🍞';
+  if(n.includes('pasta')) return '🍝';
+  if(n.includes('riso')) return '🍚';
+  if(n.includes('farina')) return '🌾';
+  if(n.includes('biscott')||n.includes('cereali')) return '🥣';
+  if(n.includes('cioccolato')||n.includes('dolce')||n.includes('torta')) return '🍫';
+  if(n.includes('caffè')||n.includes('caffe')) return '☕';
+  if(n.includes('tè')||n.includes('te ')) return '🍵';
+  if(n.includes('birra')) return '🍺';
+  if(n.includes('vino')||n.includes('gin')) return '🍷';
+  if(n.includes('acqua')||n.includes('succo')||n.includes('drink')) return '🥤';
+  if(n.includes('carta igienica')||n.includes('scottex')) return '🧻';
+  if(n.includes('sapone')||n.includes('shampoo')||n.includes('detersivo')) return '🧴';
+  if(n.includes('patatine')||n.includes('snack')) return '🍟';
+  if(n.includes('pizza')) return '🍕';
+  if(n.includes('miele')) return '🍯';
+  if(n.includes('sale')||n.includes('pepe')) return '🧂';
+  if(n.includes('olio')) return '🫙';
+  return '🛒';
+}
+
+function guessCategory(name) {
+  const n = name.toLowerCase();
+  if(n.includes('latte')||n.includes('yogurt')||n.includes('formaggio')||n.includes('burro')||n.includes('uova')) return 'Latticini';
+  if(n.includes('mela')||n.includes('banana')||n.includes('frutta')||n.includes('verdura')||n.includes('insalata')||n.includes('pomodor')||n.includes('carota')) return 'Frutta & Verdura';
+  if(n.includes('carne')||n.includes('pollo')||n.includes('pesce')||n.includes('tonno')||n.includes('prosciutto')||n.includes('salame')) return 'Carne & Pesce';
+  if(n.includes('pane')||n.includes('pasta')||n.includes('riso')||n.includes('farina')||n.includes('biscott')||n.includes('caffè')) return 'Dispensa';
+  if(n.includes('acqua')||n.includes('vino')||n.includes('birra')||n.includes('succo')||n.includes('drink')) return 'Bevande';
+  if(n.includes('detersivo')||n.includes('sapone')||n.includes('carta igienica')||n.includes('shampoo')) return 'Casa';
+  return 'Altro';
+}
+
+// ── SAVE ─────────────────────────────────────────
+function save() {
+  localStorage.setItem('spesa_catalog_v2', JSON.stringify(catalog));
+  localStorage.setItem('spesa_list_v2', JSON.stringify(shoppingList));
+}
+
+function getOrCreate(name) {
+  const trimmed = name.trim();
+  let item = catalog.find(c => c.name.toLowerCase() === trimmed.toLowerCase());
+  if (!item) {
+    item = { name: trimmed, icon: guessIcon(trimmed), price: 0, frequency: 0, lastAdded: Date.now() };
+    catalog.push(item);
+  }
+  return item;
+}
+
+// ── ADD TO LIST ───────────────────────────────────
+function addToList(name) {
+  if (!name.trim()) return;
+  const catalogItem = getOrCreate(name);
+  if (!shoppingList.some(i => i.name.toLowerCase() === catalogItem.name.toLowerCase())) {
+    catalogItem.frequency = (catalogItem.frequency || 0) + 1;
+    catalogItem.lastAdded = Date.now();
+    shoppingList.push({ ...catalogItem, id: Date.now(), completed: false });
+    save();
+    renderHome();
+    renderCart();
+    renderProfile();
+    showToast('✅ ' + catalogItem.name + ' aggiunto!');
+  } else {
+    showToast('⚠️ Già in lista!');
+  }
+  document.getElementById('food-input').value = '';
+  document.getElementById('suggestions').classList.add('hidden');
+}
+
+function removeFromList(id) {
+  shoppingList = shoppingList.filter(i => i.id !== id);
+  save();
+  renderHome();
+  renderCart();
+  renderProfile();
+}
+
+function toggleDone(id) {
+  const item = shoppingList.find(i => i.id === id);
+  if (item) { item.completed = !item.completed; save(); renderHome(); }
+}
+
+// ── RENDER HOME ───────────────────────────────────
+function renderHome() {
+  const listEl = document.getElementById('home-list');
+  const emptyEl = document.getElementById('home-empty');
+  const totalEl = document.getElementById('home-total');
+  const countEl = document.getElementById('home-count');
+  const subEl = document.getElementById('home-sub');
+
+  const total = shoppingList.reduce((s, i) => s + (Number(i.price) || 0), 0);
+  totalEl.textContent = '€' + total.toFixed(2);
+  const count = shoppingList.length;
+  countEl.textContent = count + ' prodott' + (count === 1 ? 'o' : 'i') + ' in lista';
+  subEl.textContent = 'Lista condivisa · ' + count + ' element' + (count === 1 ? 'o' : 'i');
+
+  // Remove old items (keep empty div)
+  Array.from(listEl.children).forEach(c => { if (!c.classList.contains('list-empty')) c.remove(); });
+
+  if (shoppingList.length === 0) {
+    emptyEl.style.display = '';
+    document.getElementById('pred-section').style.display = 'none';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  // Predictive
+  renderPredictive();
+
+  shoppingList.forEach(item => {
+    const li = document.createElement('div');
+    li.className = 'list-item' + (item.completed ? ' done' : '');
+    li.innerHTML = `
+      <div class="item-check">${item.completed ? '<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><polyline points="1,5 4.5,9 11,1" stroke="#0A0F1E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}</div>
+      <span class="item-icon">${item.icon || '🛒'}</span>
+      <div class="item-info">
+        <div class="item-name">${item.name}</div>
+        <div class="item-cat">${guessCategory(item.name)}</div>
+      </div>
+      ${item.price > 0 ? `<span class="item-price">€${Number(item.price).toFixed(2)}</span>` : ''}
+      <button class="item-del" onclick="event.stopPropagation(); removeFromList(${item.id})">×</button>
+    `;
+    li.addEventListener('click', () => toggleDone(item.id));
+    listEl.appendChild(li);
+  });
+}
+
+function renderPredictive() {
+  const predSection = document.getElementById('pred-section');
+  const chips = document.getElementById('pred-chips');
+
+  // Items in catalog with frequency > 1 but not currently in list
+  const inListNames = shoppingList.map(i => i.name.toLowerCase());
+  const candidates = catalog
+    .filter(c => c.frequency >= 1 && !inListNames.includes(c.name.toLowerCase()))
+    .sort((a, b) => b.frequency - a.frequency)
+    .slice(0, 5);
+
+  if (candidates.length === 0) { predSection.style.display = 'none'; return; }
+  predSection.style.display = '';
+  chips.innerHTML = '';
+  candidates.forEach(c => {
+    const chip = document.createElement('div');
+    chip.className = 'pred-chip';
+    chip.innerHTML = `${c.icon || '🛒'} ${c.name}`;
+    chip.onclick = () => { addToList(c.name); };
+    chips.appendChild(chip);
+  });
+}
+
+// ── RENDER CART (statistics) ─────────────────────
+function renderCart() {
+  const listEl = document.getElementById('stat-list');
+  const sorted = [...catalog].filter(c => c.frequency > 0).sort((a, b) => b.frequency - a.frequency);
+
+  if (sorted.length === 0) {
+    listEl.innerHTML = '<div class="cart-empty">Nessun prodotto ancora.<br>Inizia ad aggiungere prodotti!</div>';
+    return;
+  }
+
+  const maxFreq = sorted[0].frequency;
+  listEl.innerHTML = '';
+  sorted.forEach((item, i) => {
+    const pct = Math.round((item.frequency / maxFreq) * 100);
+    let rankClass = ''; let rankSymbol = '#' + (i + 1);
+    if (i === 0) { rankClass = 'gold'; rankSymbol = '🥇'; }
+    else if (i === 1) { rankClass = 'silver'; rankSymbol = '🥈'; }
+    else if (i === 2) { rankClass = 'bronze'; rankSymbol = '🥉'; }
+
+    const div = document.createElement('div');
+    div.className = 'stat-item';
+    div.innerHTML = `
+      <span class="stat-rank ${rankClass}">${rankSymbol}</span>
+      <span class="stat-icon">${item.icon || '🛒'}</span>
+      <div class="stat-info">
+        <div class="stat-name">${item.name}</div>
+        <div class="stat-bar-wrap"><div class="stat-bar" style="width:${pct}%"></div></div>
+      </div>
+      <span class="stat-count">${item.frequency}×</span>
+    `;
+    listEl.appendChild(div);
+  });
+}
+
+// ── RENDER ESPLORA ────────────────────────────────
+function renderEsplora() {
+  const listEl = document.getElementById('supermercati-list');
+  listEl.innerHTML = '';
+  SUPERMARKETS.forEach(s => {
+    const a = document.createElement('a');
+    a.className = 'super-card';
+    a.href = s.url; a.target = '_blank'; a.rel = 'noopener';
+    a.innerHTML = `
+      <div class="super-accent" style="background:${s.color}"></div>
+      <div class="super-body">
+        <span class="super-emoji">${s.emoji}</span>
+        <div class="super-name">${s.name}</div>
+        <div class="super-desc">${s.desc}</div>
+        <div class="super-tags">${s.tags.map(t => `<span class="super-tag">${t}</span>`).join('')}</div>
+      </div>
+      <div class="super-arrow">›</div>
+    `;
+    listEl.appendChild(a);
+  });
+}
+
+// ── RENDER PROFILE ────────────────────────────────
+function renderProfile() {
+  const totalProducts = catalog.filter(c => c.frequency > 0).length;
+  const totalAcquisti = catalog.reduce((s, c) => s + (c.frequency || 0), 0);
+  const cats = new Set(catalog.filter(c => c.frequency > 0).map(c => guessCategory(c.name)));
+  document.getElementById('ps-totprodotti').textContent = totalProducts;
+  document.getElementById('ps-acquisti').textContent = totalAcquisti;
+  document.getElementById('ps-categorie').textContent = cats.size;
+}
+
+// ── NAVIGATION ────────────────────────────────────
+const pages = { home: 'page-home', esplora: 'page-esplora', cart: 'page-cart', profile: 'page-profile' };
+let currentPage = 'home';
+
+function goTo(name) {
+  if (!pages[name]) return;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(pages[name]).classList.add('active');
+  const btn = document.querySelector(`.nav-btn[data-page="${name}"]`);
+  if (btn) btn.classList.add('active');
+  currentPage = name;
+  window.scrollTo(0, 0);
+}
+
+document.querySelectorAll('.nav-btn[data-page]').forEach(btn => {
+  btn.addEventListener('click', () => goTo(btn.dataset.page));
+});
+
+// ── MODAL ─────────────────────────────────────────
+const modal = document.getElementById('modal');
+const foodInput = document.getElementById('food-input');
+const suggestionsEl = document.getElementById('suggestions');
+
+function openModal() {
+  modal.classList.add('open');
+  setTimeout(() => foodInput.focus(), 300);
+}
+function closeModal() {
+  modal.classList.remove('open');
+  foodInput.value = '';
+  suggestionsEl.classList.add('hidden');
+}
+
+document.getElementById('fab').addEventListener('click', openModal);
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+document.getElementById('add-btn').addEventListener('click', () => {
+  addToList(foodInput.value);
+  closeModal();
+});
+
+foodInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); addToList(foodInput.value); closeModal(); }
+});
+
+foodInput.addEventListener('input', () => {
+  const q = foodInput.value.toLowerCase().trim();
+  suggestionsEl.innerHTML = '';
+  if (!q) { suggestionsEl.classList.add('hidden'); return; }
+  const matches = catalog.filter(c => c.name.toLowerCase().includes(q)).slice(0, 6);
+  if (matches.length === 0) { suggestionsEl.classList.add('hidden'); return; }
+  matches.forEach(m => {
+    const li = document.createElement('li');
+    li.className = 'suggestion-item';
+    li.innerHTML = `<span class="sug-icon">${m.icon || '🛒'}</span><span class="sug-name">${m.name}</span>`;
+    li.addEventListener('click', () => { addToList(m.name); closeModal(); });
+    suggestionsEl.appendChild(li);
+  });
+  suggestionsEl.classList.remove('hidden');
+});
+
+// ── TOAST ─────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── PROFILE ACTIONS ───────────────────────────────
+function clearList() {
+  if (confirm('Svuotare la lista della spesa?')) {
+    shoppingList = [];
+    save(); renderHome(); renderCart(); renderProfile();
+    showToast('🗑️ Lista svuotata!');
+  }
+}
+function resetStats() {
+  if (confirm('Azzerare tutte le statistiche di acquisto?')) {
+    catalog.forEach(c => c.frequency = 0);
+    save(); renderCart(); renderProfile();
+    showToast('📊 Statistiche azzerate!');
+  }
+}
+function goToVolantini() { goTo('esplora'); }
+
+// ── INIT ──────────────────────────────────────────
+renderHome();
+renderCart();
+renderEsplora();
+renderProfile();
+</script>
 </body>
 </html>
