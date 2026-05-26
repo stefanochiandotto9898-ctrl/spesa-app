@@ -278,26 +278,7 @@ html, body {
 .paction-sub { font-size:11px; color:var(--muted2); margin-top:2px; }
 .paction-arrow { color:var(--muted); }
 
-/* ── MODAL AGGIUNGI ── */
-.modal-overlay {
-  position:fixed; inset:0;
-  background:rgba(0,0,0,.75); backdrop-filter:blur(8px);
-  z-index:500; display:flex; align-items:flex-end;
-  opacity:0; pointer-events:none; transition:opacity .25s;
-}
-.modal-overlay.open { opacity:1; pointer-events:all; }
-.modal-sheet {
-  width:100%; max-width:450px; margin:0 auto;
-  background:var(--card); border-radius:24px 24px 0 0;
-  padding:0 20px 40px;
-  transform:translateY(100%); transition:transform .3s cubic-bezier(.32,1.25,.5,1);
-}
-.modal-overlay.open .modal-sheet { transform:translateY(0); }
-.modal-handle {
-  width:40px; height:4px; border-radius:4px;
-  background:var(--border); margin:12px auto 20px;
-}
-.modal-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; margin-bottom:18px; }
+/* ── INLINE INPUT ── */
 .input-row {
   display:flex; align-items:center; gap:10px;
   background:var(--card2); border-radius:var(--rm);
@@ -308,7 +289,7 @@ html, body {
 .input-row:focus-within { border-color:var(--green); }
 .input-row input {
   flex:1; background:none; border:none; outline:none;
-  color:var(--text); font-size:17px; font-family:'DM Sans',sans-serif;
+  color:#ffffff; font-size:17px; font-family:'DM Sans',sans-serif;
   padding:8px 0;
 }
 .input-row input::placeholder { color:var(--muted); }
@@ -317,33 +298,28 @@ html, body {
   background:var(--green); border:none; color:#0A0F1E;
   font-size:22px; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
-  transition:transform .15s;
+  transition:transform .15s; flex-shrink: 0;
 }
 .input-add-btn:active { transform:scale(.9); }
+
 .suggestions {
-  list-style:none; margin-top:10px;
-  background:var(--card2); border-radius:var(--rm);
+  list-style:none; margin-top:6px;
+  background:var(--card); border-radius:var(--rm);
   border:1px solid var(--border); overflow:hidden;
-  max-height:200px; overflow-y:auto;
+  max-height:250px; overflow-y:auto;
+  position:absolute; top:100%; left:20px; right:20px; z-index:20;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
 .suggestions.hidden { display:none; }
 .suggestion-item {
   padding:13px 16px; display:flex; align-items:center; gap:12px;
   cursor:pointer; border-bottom:1px solid var(--border);
-  transition:background .15s;
+  transition:background .15s; background:var(--card); color:var(--text);
 }
 .suggestion-item:last-child { border-bottom:none; }
 .suggestion-item:hover { background:var(--border); }
 .sug-icon { font-size:20px; }
-.sug-name { font-size:14px; }
-.modal-cancel {
-  width:100%; margin-top:14px;
-  background:none; border:1px solid var(--border);
-  border-radius:var(--rm); padding:14px;
-  color:var(--muted2); font-size:15px; font-family:'DM Sans',sans-serif;
-  cursor:pointer; transition:all .2s;
-}
-.modal-cancel:hover { border-color:var(--muted2); color:var(--text); }
+.sug-name { font-size:14px; font-weight:500; }
 
 /* TOAST */
 .toast {
@@ -384,11 +360,21 @@ html, body {
       </div>
     </div>
 
-    <!-- Suggeriti -->
-    <div id="pred-section" style="padding:0 20px; margin-bottom:16px; display:none;">
-      <div class="pred-card">
-        <h3>Forse sono finiti</h3>
-        <div class="pred-chips" id="pred-chips"></div>
+    <!-- INLINE INPUT -->
+    <div class="inline-input-section" style="padding:0 20px; margin-bottom:16px; position:relative; z-index:50;">
+      <div class="input-row">
+        <input type="text" id="food-input" placeholder="Cosa ti serve?" autocomplete="off" autocorrect="off">
+        <button class="input-add-btn" id="add-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+      <ul class="suggestions hidden" id="suggestions"></ul>
+      
+      <div id="pred-section" style="display:none; margin-top:12px;">
+        <div class="pred-card" style="padding:12px 16px;">
+          <h3 style="margin-bottom:8px;">Forse sono finiti</h3>
+          <div class="pred-chips" id="pred-chips"></div>
+        </div>
       </div>
     </div>
 
@@ -471,21 +457,7 @@ html, body {
     </div>
   </div>
 
-  <!-- ── MODAL AGGIUNGI ── -->
-  <div class="modal-overlay" id="modal">
-    <div class="modal-sheet">
-      <div class="modal-handle"></div>
-      <div class="modal-title">Aggiungi alla lista</div>
-      <div class="input-row">
-        <input type="text" id="food-input" placeholder="Cosa ti serve?" autocomplete="off" autocorrect="off">
-        <button class="input-add-btn" id="add-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        </button>
-      </div>
-      <ul class="suggestions hidden" id="suggestions"></ul>
-      <button class="modal-cancel" id="modal-cancel">Annulla</button>
-    </div>
-  </div>
+  <!-- Modal rimosso, ora l'input è inline -->
 
   <!-- ── BOTTOM NAV ── -->
   <nav class="nav">
@@ -810,32 +782,25 @@ document.querySelectorAll('.nav-btn[data-page]').forEach(btn => {
   btn.addEventListener('click', () => goTo(btn.dataset.page));
 });
 
-// ── MODAL ─────────────────────────────────────────
-const modal = document.getElementById('modal');
+// ── INLINE INPUT ──────────────────────────────────
 const foodInput = document.getElementById('food-input');
 const suggestionsEl = document.getElementById('suggestions');
 
-function openModal() {
-  modal.classList.add('open');
+document.getElementById('fab').addEventListener('click', () => {
+  if (currentPage !== 'home') goTo('home');
+  window.scrollTo({top: 0, behavior: 'smooth'});
   setTimeout(() => foodInput.focus(), 300);
-}
-function closeModal() {
-  modal.classList.remove('open');
-  foodInput.value = '';
-  suggestionsEl.classList.add('hidden');
-}
-
-document.getElementById('fab').addEventListener('click', openModal);
-document.getElementById('modal-cancel').addEventListener('click', closeModal);
-modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+});
 
 document.getElementById('add-btn').addEventListener('click', () => {
   addToList(foodInput.value);
-  closeModal();
 });
 
 foodInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); addToList(foodInput.value); closeModal(); }
+  if (e.key === 'Enter') { 
+    e.preventDefault(); 
+    addToList(foodInput.value); 
+  }
 });
 
 foodInput.addEventListener('input', () => {
@@ -848,10 +813,23 @@ foodInput.addEventListener('input', () => {
     const li = document.createElement('li');
     li.className = 'suggestion-item';
     li.innerHTML = `<span class="sug-icon">${m.icon || '🛒'}</span><span class="sug-name">${m.name}</span>`;
-    li.addEventListener('click', () => { addToList(m.name); closeModal(); });
+    li.addEventListener('click', () => { addToList(m.name); });
     suggestionsEl.appendChild(li);
   });
   suggestionsEl.classList.remove('hidden');
+});
+
+// Nascondi i suggerimenti se si clicca fuori
+document.addEventListener('click', e => {
+  if (!e.target.closest('.inline-input-section')) {
+    suggestionsEl.classList.add('hidden');
+  }
+});
+
+foodInput.addEventListener('focus', () => {
+  if (foodInput.value.trim() && suggestionsEl.children.length > 0) {
+    suggestionsEl.classList.remove('hidden');
+  }
 });
 
 // ── TOAST ─────────────────────────────────────────
