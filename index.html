@@ -597,6 +597,7 @@ html, body {
   <div class="toast" id="toast"></div>
 </div>
 
+<script src="products-db.js"></script>
 <script>
 // ── DATI ──────────────────────────────────────────
 let catalog = JSON.parse(localStorage.getItem('spesa_catalog_v2')) || [];
@@ -704,9 +705,23 @@ function save() {
 function getOrCreate(name) {
   const trimmed = name.trim();
   let item = catalog.find(c => c.name.toLowerCase() === trimmed.toLowerCase());
+  
+  const dbInfo = typeof getProductInfo === 'function' ? getProductInfo(trimmed) : null;
+  
   if (!item) {
-    item = { name: trimmed, icon: guessIcon(trimmed), price: 0, frequency: 0, lastAdded: Date.now() };
+    if (dbInfo) {
+      item = { name: dbInfo.name, icon: dbInfo.emoji, img: dbInfo.img, category: dbInfo.cat, price: 0, frequency: 0, lastAdded: Date.now() };
+    } else {
+      item = { name: trimmed, icon: guessIcon(trimmed), img: null, category: guessCategory(trimmed), price: 0, frequency: 0, lastAdded: Date.now() };
+    }
     catalog.push(item);
+  } else {
+    // Retrofit existing items with images if available
+    if (dbInfo && !item.img) {
+      item.img = dbInfo.img;
+      item.icon = dbInfo.emoji;
+      item.category = dbInfo.cat;
+    }
   }
   return item;
 }
@@ -776,7 +791,12 @@ function renderHome() {
   // Group by category
   const groups = {};
   shoppingList.forEach(item => {
-    const cat = guessCategory(item.name);
+    // Update legacy items silently
+    if (typeof getProductInfo === 'function' && !item.img) {
+      const dbInfo = getProductInfo(item.name);
+      if (dbInfo) { item.img = dbInfo.img; item.icon = dbInfo.emoji; item.category = dbInfo.cat; }
+    }
+    const cat = item.category || guessCategory(item.name);
     if (!groups[cat]) groups[cat] = [];
     groups[cat].push(item);
   });
@@ -802,9 +822,13 @@ function renderHome() {
     items.forEach(item => {
       const li = document.createElement('div');
       li.className = 'list-item' + (item.completed ? ' done' : '');
+      const mediaHtml = item.img 
+        ? `<img src="${item.img}" style="width:26px;height:26px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.1));">` 
+        : (item.icon || '🛒');
+        
       li.innerHTML = `
         <div class="item-check">${item.completed ? '<svg width="14" height="12" viewBox="0 0 14 12" fill="none"><polyline points="1,6 5,10 13,1" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}</div>
-        <div class="item-icon-wrap">${item.icon || '🛒'}</div>
+        <div class="item-icon-wrap">${mediaHtml}</div>
         <div class="item-info">
           <div class="item-name">${item.name}</div>
           <div class="item-cat">${cat}</div>
@@ -838,7 +862,10 @@ function renderPredictive() {
   candidates.forEach(c => {
     const chip = document.createElement('div');
     chip.className = 'pred-chip';
-    chip.innerHTML = `${c.icon || '🛒'} ${c.name}`;
+    const mediaHtml = c.img 
+      ? `<img src="${c.img}" style="width:16px;height:16px;object-fit:contain;">` 
+      : (c.icon || '🛒');
+    chip.innerHTML = `${mediaHtml} <span>${c.name}</span>`;
     chip.onclick = () => { addToList(c.name); };
     chips.appendChild(chip);
   });
@@ -866,9 +893,13 @@ function renderCart() {
 
     const div = document.createElement('div');
     div.className = 'stat-item';
+    const mediaHtml = item.img 
+      ? `<img src="${item.img}" style="width:24px;height:24px;object-fit:contain;">` 
+      : (item.icon || '🛒');
+      
     div.innerHTML = `
       <span class="stat-rank ${rankClass}">${rankSymbol}</span>
-      <div class="stat-icon">${item.icon || '🛒'}</div>
+      <div class="stat-icon">${mediaHtml}</div>
       <div class="stat-info">
         <div class="stat-name">${item.name}</div>
         <div class="stat-bar-wrap"><div class="stat-bar" style="width:${pct}%"></div></div>
@@ -956,12 +987,29 @@ foodInput.addEventListener('input', () => {
   const q = foodInput.value.toLowerCase().trim();
   suggestionsEl.innerHTML = '';
   if (!q) { suggestionsEl.classList.add('hidden'); return; }
-  const matches = catalog.filter(c => c.name.toLowerCase().includes(q)).slice(0, 6);
+  
+  let matches = catalog.filter(c => c.name.toLowerCase().includes(q));
+  if (typeof searchProducts === 'function') {
+    const dbMatches = searchProducts(q);
+    const merged = [...matches];
+    dbMatches.forEach(dbItem => {
+      if (!merged.some(m => m.name.toLowerCase() === dbItem.name.toLowerCase())) {
+        merged.push({ name: dbItem.name, icon: dbItem.emoji, img: dbItem.img });
+      }
+    });
+    matches = merged;
+  }
+  
+  matches = matches.slice(0, 6);
   if (matches.length === 0) { suggestionsEl.classList.add('hidden'); return; }
+  
   matches.forEach(m => {
     const li = document.createElement('li');
     li.className = 'suggestion-item';
-    li.innerHTML = `<span class="sug-icon">${m.icon || '🛒'}</span><span class="sug-name">${m.name}</span>`;
+    const mediaHtml = m.img 
+      ? `<img src="${m.img}" style="width:24px;height:24px;object-fit:contain;">` 
+      : (m.icon || '🛒');
+    li.innerHTML = `<span class="sug-icon" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:var(--bg);border-radius:8px;">${mediaHtml}</span><span class="sug-name">${m.name}</span>`;
     li.addEventListener('click', () => { addToList(m.name); });
     suggestionsEl.appendChild(li);
   });
