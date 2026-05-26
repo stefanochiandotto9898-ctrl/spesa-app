@@ -366,13 +366,17 @@ html, body {
 .avatars-row { display: flex; justify-content: center; gap: 32px; margin-top: 24px; }
 .profile-avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .profile-avatar {
-  width: 72px; height: 72px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Inter', sans-serif; font-size: 28px; font-weight: 800;
+  width: 80px; height: 80px; border-radius: 50%;
   position: relative;
+  overflow: hidden;
+  border: 3px solid var(--white);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
 }
-.profile-avatar.s { background: linear-gradient(135deg, #34C759, #30D158); color: #fff; }
-.profile-avatar.f { background: linear-gradient(135deg, #FF9500, #FF6B00); color: #fff; }
+.profile-avatar img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
 .profile-avatar .online {
   position: absolute; bottom: 2px; right: 2px;
   width: 14px; height: 14px; border-radius: 50%;
@@ -521,13 +525,13 @@ html, body {
       <div class="profile-title">Profilo</div>
       <div class="avatars-row">
         <div class="profile-avatar-wrap">
-          <div class="profile-avatar s">S<div class="online"></div></div>
-          <div class="profile-name">Stefano</div>
+          <div class="profile-avatar"><img src="avatar-ste.png" alt="Stefano"><div class="online"></div></div>
+          <div class="profile-name">Ste</div>
           <div class="profile-role">Admin lista</div>
         </div>
         <div class="profile-avatar-wrap">
-          <div class="profile-avatar f">F</div>
-          <div class="profile-name">Francesca</div>
+          <div class="profile-avatar"><img src="avatar-frenci.png" alt="Francesca"><div class="online"></div></div>
+          <div class="profile-name">Frenci</div>
           <div class="profile-role">Collaboratore</div>
         </div>
       </div>
