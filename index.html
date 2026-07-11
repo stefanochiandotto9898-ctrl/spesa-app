@@ -431,6 +431,100 @@ html, body {
   box-shadow: var(--shadow-lg);
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* ── CALENDARIO ── */
+.calendar-header {
+  padding: 54px 20px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--bg);
+  position: sticky; top: 0; z-index: 100;
+}
+.cal-nav-btn {
+  background: var(--card); border: 1px solid var(--border);
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.cal-nav-btn:active { background: var(--bg); }
+.cal-week-label { font-size: 16px; font-weight: 700; text-align: center; flex: 1; }
+.calendar-days { padding: 0 20px 20px; display: flex; flex-direction: column; gap: 16px; }
+.cal-day {
+  background: var(--card); border-radius: var(--r);
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.cal-day-header {
+  padding: 12px 16px; background: rgba(0,0,0,0.02);
+  border-bottom: 1px solid var(--border-light);
+  font-weight: 700; font-size: 15px;
+}
+.cal-day-header.today { background: var(--green-light); color: var(--green); }
+.cal-meals { display: flex; flex-direction: column; }
+.cal-meal { padding: 12px 16px; border-bottom: 1px solid var(--border-light); }
+.cal-meal:last-child { border-bottom: none; }
+.cal-meal-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.cal-dishes { display: flex; flex-direction: column; gap: 6px; }
+.cal-dish {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; background: var(--bg);
+  border-radius: 8px; cursor: pointer; transition: background .15s;
+}
+.cal-dish:active { background: var(--border-light); }
+.cal-dish-icon { font-size: 18px; }
+.cal-dish-name { flex: 1; font-size: 14px; font-weight: 500; }
+.cal-dish-del { background: none; border: none; color: var(--muted2); padding: 4px; }
+.cal-add-btn {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--blue); font-size: 14px; font-weight: 600;
+  cursor: pointer; padding: 6px 0; margin-top: 4px;
+}
+
+/* ── MODALS ── */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4); z-index: 500;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+  display: flex; flex-direction: column; justify-content: flex-end;
+}
+.modal-overlay.active { opacity: 1; pointer-events: all; }
+.modal-content {
+  background: var(--bg); border-radius: 24px 24px 0 0;
+  padding: 24px 20px; max-height: 85vh; overflow-y: auto;
+  transform: translateY(100%); transition: transform .3s cubic-bezier(.18,.89,.32,1.28);
+}
+.modal-overlay.active .modal-content { transform: translateY(0); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.modal-title { font-size: 20px; font-weight: 800; }
+.modal-close { background: var(--border-light); border: none; width: 32px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+/* Ricerca Piatti Modal */
+.recipe-search-bar { display: flex; gap: 10px; margin-bottom: 16px; }
+.recipe-search-bar input { flex: 1; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); outline: none; font-size: 16px; font-family: 'Inter', sans-serif; }
+.recipe-search-bar button { background: var(--blue); color: #fff; border: none; border-radius: 12px; padding: 0 16px; font-weight: 600; }
+.recipe-list { display: flex; flex-direction: column; gap: 8px; }
+.recipe-item {
+  display: flex; align-items: center; gap: 12px; padding: 12px;
+  background: var(--card); border-radius: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.recipe-item:active { background: var(--border-light); }
+.recipe-item-info { flex: 1; }
+.recipe-item-name { font-weight: 600; font-size: 15px; }
+.recipe-item-cat { font-size: 12px; color: var(--muted); }
+
+/* Dettaglio Piatto Modal */
+.dish-detail-icon { font-size: 48px; text-align: center; margin-bottom: 8px; }
+.dish-detail-title { text-align: center; font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+.dish-detail-portions { text-align: center; font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+.dish-detail-section { font-size: 14px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; }
+.dish-ingredients { background: var(--card); border-radius: var(--r); padding: 8px 16px; margin-bottom: 24px; }
+.dish-ingredient { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-light); }
+.dish-ingredient:last-child { border-bottom: none; }
+.dish-ing-name { font-weight: 500; }
+.dish-ing-qty { color: var(--muted); }
+.btn-add-spesa {
+  width: 100%; padding: 16px; border-radius: 14px;
+  background: var(--green); color: #fff; border: none;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(52,199,89,.35);
+}
 </style>
 </head>
 <body>
@@ -518,6 +612,22 @@ html, body {
     <div class="supermercati" id="supermercati-list"></div>
   </div>
 
+  <!-- ── CALENDARIO ── -->
+  <div class="page" id="page-calendario">
+    <div class="calendar-header">
+      <button class="cal-nav-btn" onclick="changeWeek(-1)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="cal-week-label" id="cal-week-label">Questa Settimana</div>
+      <button class="cal-nav-btn" onclick="changeWeek(1)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+    <div class="calendar-days" id="calendar-days">
+      <!-- Giorni generati via JS -->
+    </div>
+  </div>
+
   <!-- ── PROFILO ── -->
   <div class="page" id="page-profile">
     <div class="profile-header">
@@ -584,6 +694,10 @@ html, body {
     <button class="fab-btn" id="fab">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
+    <button class="nav-btn" data-page="calendario">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Calendario
+    </button>
     <button class="nav-btn" data-page="cart">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
       Statistiche
@@ -595,8 +709,39 @@ html, body {
   </nav>
 
   <div class="toast" id="toast"></div>
+
+  <!-- Modal Ricerca Piatti -->
+  <div class="modal-overlay" id="modal-search-dish" onclick="if(event.target===this) closeDishSearch()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Aggiungi Piatto</div>
+        <button class="modal-close" onclick="closeDishSearch()">✕</button>
+      </div>
+      <div class="recipe-search-bar">
+        <input type="text" id="dish-search-input" placeholder="Cerca ricetta o scrivi piatto..." autocomplete="off">
+        <button onclick="addCustomDish()">Aggiungi</button>
+      </div>
+      <div class="recipe-list" id="recipe-list">
+        <!-- Risultati ricerca -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dettaglio Piatto -->
+  <div class="modal-overlay" id="modal-dish-detail" onclick="if(event.target===this) closeDishDetail()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Dettagli</div>
+        <button class="modal-close" onclick="closeDishDetail()">✕</button>
+      </div>
+      <div id="dish-detail-content">
+        <!-- Dettagli generati via JS -->
+      </div>
+    </div>
+  </div>
 </div>
 
+<script src="recipes-db.js"></script>
 <script src="products-db.js"></script>
 <script>
 // ── DATI ──────────────────────────────────────────
@@ -944,7 +1089,7 @@ function renderProfile() {
 }
 
 // ── NAVIGATION ────────────────────────────────────
-const pages = { home: 'page-home', esplora: 'page-esplora', cart: 'page-cart', profile: 'page-profile' };
+const pages = { home: 'page-home', esplora: 'page-esplora', calendario: 'page-calendario', cart: 'page-cart', profile: 'page-profile' };
 let currentPage = 'home';
 
 function goTo(name) {
@@ -1053,11 +1198,271 @@ function resetStats() {
 }
 function goToVolantini() { goTo('esplora'); }
 
+// ── CALENDARIO (Meal Planner) ─────────────────────
+let weekOffset = 0;
+let calendarData = JSON.parse(localStorage.getItem('spesa_calendar_v1')) || {};
+
+// Restituisce la data del lunedì della settimana in base all'offset
+function getMonday(offset) {
+  const d = new Date();
+  const day = d.getDay(), diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+  const monday = new Date(d.setDate(diff));
+  monday.setDate(monday.getDate() + (offset * 7));
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+
+function getWeekId(offset) {
+  const m = getMonday(offset);
+  return m.toISOString().split('T')[0];
+}
+
+const dayNames = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+
+function renderCalendar() {
+  const weekId = getWeekId(weekOffset);
+  const monday = getMonday(weekOffset);
+  const labelEl = document.getElementById('cal-week-label');
+  
+  if (weekOffset === 0) labelEl.textContent = 'Questa Settimana';
+  else if (weekOffset === 1) labelEl.textContent = 'Prossima Settimana';
+  else if (weekOffset === -1) labelEl.textContent = 'Settimana Scorsa';
+  else {
+    const end = new Date(monday);
+    end.setDate(monday.getDate() + 6);
+    labelEl.textContent = `${monday.getDate()}/${monday.getMonth()+1} - ${end.getDate()}/${end.getMonth()+1}`;
+  }
+
+  const container = document.getElementById('calendar-days');
+  container.innerHTML = '';
+
+  const weekData = calendarData[weekId] || {};
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    const isToday = (dateStr === todayStr);
+    
+    const dayData = weekData[dateStr] || { pranzo: [], cena: [] };
+
+    const dayEl = document.createElement('div');
+    dayEl.className = 'cal-day';
+    dayEl.innerHTML = `
+      <div class="cal-day-header ${isToday ? 'today' : ''}">
+        ${dayNames[i]} ${d.getDate()}/${d.getMonth()+1}
+      </div>
+      <div class="cal-meals">
+        <div class="cal-meal">
+          <div class="cal-meal-title">Pranzo</div>
+          <div class="cal-dishes" id="dishes-${dateStr}-pranzo"></div>
+          <div class="cal-add-btn" onclick="openDishSearch('${dateStr}', 'pranzo')">+ Aggiungi piatto</div>
+        </div>
+        <div class="cal-meal">
+          <div class="cal-meal-title">Cena</div>
+          <div class="cal-dishes" id="dishes-${dateStr}-cena"></div>
+          <div class="cal-add-btn" onclick="openDishSearch('${dateStr}', 'cena')">+ Aggiungi piatto</div>
+        </div>
+      </div>
+    `;
+    container.appendChild(dayEl);
+
+    renderDishes(dateStr, 'pranzo', dayData.pranzo);
+    renderDishes(dateStr, 'cena', dayData.cena);
+  }
+}
+
+function renderDishes(dateStr, mealType, dishes) {
+  const el = document.getElementById(`dishes-${dateStr}-${mealType}`);
+  if (!el) return;
+  el.innerHTML = '';
+  dishes.forEach((dish, idx) => {
+    const div = document.createElement('div');
+    div.className = 'cal-dish';
+    div.innerHTML = `
+      <span class="cal-dish-icon">${dish.emoji || '🍽️'}</span>
+      <span class="cal-dish-name">${dish.name}</span>
+      <button class="cal-dish-del" onclick="event.stopPropagation(); removeDish('${dateStr}', '${mealType}', ${idx})">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    `;
+    div.onclick = () => openDishDetail(dish);
+    el.appendChild(div);
+  });
+}
+
+function changeWeek(delta) {
+  weekOffset += delta;
+  renderCalendar();
+}
+
+// ── MODAL RICERCA PIATTI ──
+let targetDateStr = null;
+let targetMealType = null;
+
+function openDishSearch(dateStr, mealType) {
+  targetDateStr = dateStr;
+  targetMealType = mealType;
+  document.getElementById('modal-search-dish').classList.add('active');
+  const input = document.getElementById('dish-search-input');
+  input.value = '';
+  renderRecipeList('');
+  setTimeout(() => input.focus(), 200);
+}
+
+function closeDishSearch() {
+  document.getElementById('modal-search-dish').classList.remove('active');
+}
+
+document.getElementById('dish-search-input').addEventListener('input', (e) => {
+  renderRecipeList(e.target.value);
+});
+document.getElementById('dish-search-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addCustomDish();
+});
+
+function renderRecipeList(query) {
+  const list = document.getElementById('recipe-list');
+  list.innerHTML = '';
+  let results = typeof searchRecipes === 'function' ? searchRecipes(query) : [];
+  if (!query) results = results.slice(0, 5); // Default suggestions
+
+  results.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'recipe-item';
+    div.innerHTML = `
+      <div style="font-size:24px">${r.emoji}</div>
+      <div class="recipe-item-info">
+        <div class="recipe-item-name">${r.name}</div>
+        <div class="recipe-item-cat">${r.cat}</div>
+      </div>
+      <div style="color:var(--blue);font-weight:700">+</div>
+    `;
+    div.onclick = () => selectRecipe(r);
+    list.appendChild(div);
+  });
+}
+
+function selectRecipe(r) {
+  addDishToCalendar({
+    id: r.id,
+    name: r.name,
+    emoji: r.emoji,
+    isRecipe: true
+  });
+}
+
+function addCustomDish() {
+  const val = document.getElementById('dish-search-input').value.trim();
+  if (!val) return;
+  addDishToCalendar({
+    id: 'custom_' + Date.now(),
+    name: val,
+    emoji: '🍽️',
+    isRecipe: false
+  });
+}
+
+function addDishToCalendar(dishObj) {
+  const weekId = getWeekId(weekOffset);
+  if (!calendarData[weekId]) calendarData[weekId] = {};
+  if (!calendarData[weekId][targetDateStr]) calendarData[weekId][targetDateStr] = { pranzo: [], cena: [] };
+  
+  calendarData[weekId][targetDateStr][targetMealType].push(dishObj);
+  localStorage.setItem('spesa_calendar_v1', JSON.stringify(calendarData));
+  
+  closeDishSearch();
+  renderCalendar();
+}
+
+function removeDish(dateStr, mealType, idx) {
+  const weekId = getWeekId(weekOffset);
+  if (calendarData[weekId] && calendarData[weekId][dateStr]) {
+    calendarData[weekId][dateStr][mealType].splice(idx, 1);
+    localStorage.setItem('spesa_calendar_v1', JSON.stringify(calendarData));
+    renderCalendar();
+  }
+}
+
+// ── MODAL DETTAGLIO PIATTO ──
+let currentDishObj = null;
+
+function openDishDetail(dish) {
+  currentDishObj = dish;
+  const modal = document.getElementById('modal-dish-detail');
+  const content = document.getElementById('dish-detail-content');
+  
+  let recipe = null;
+  if (dish.isRecipe && typeof getRecipeById === 'function') {
+    recipe = getRecipeById(dish.id);
+  }
+
+  if (recipe) {
+    let ingHtml = recipe.ingredients.map(ing => `
+      <div class="dish-ingredient">
+        <span class="dish-ing-name">${ing.name}</span>
+        <span class="dish-ing-qty">${ing.qty} ${ing.unit}</span>
+      </div>
+    `).join('');
+
+    content.innerHTML = `
+      <div class="dish-detail-icon">${recipe.emoji}</div>
+      <div class="dish-detail-title">${recipe.name}</div>
+      <div class="dish-detail-portions">Per ${recipe.portions} ${recipe.portions === 1 ? 'persona' : 'persone'}</div>
+      
+      <div class="dish-detail-section">Ingredienti</div>
+      <div class="dish-ingredients">
+        ${ingHtml}
+      </div>
+      <button class="btn-add-spesa" onclick="addIngredientsToSpesa('${recipe.id}')">
+        Aggiungi ingredienti alla Spesa
+      </button>
+    `;
+  } else {
+    content.innerHTML = `
+      <div class="dish-detail-icon">${dish.emoji}</div>
+      <div class="dish-detail-title">${dish.name}</div>
+      <div class="dish-detail-portions">Piatto personalizzato</div>
+      <div class="dish-ingredients" style="text-align:center;color:var(--muted);padding:24px 16px;">
+        Nessun ingrediente specificato.
+      </div>
+      <button class="btn-add-spesa" onclick="addToList('${dish.name.replace(/'/g, "\\'")}'); closeDishDetail();">
+        Aggiungi "${dish.name}" alla Spesa
+      </button>
+    `;
+  }
+
+  modal.classList.add('active');
+}
+
+function closeDishDetail() {
+  document.getElementById('modal-dish-detail').classList.remove('active');
+}
+
+function addIngredientsToSpesa(recipeId) {
+  if (typeof getRecipeById === 'function') {
+    const recipe = getRecipeById(recipeId);
+    if (recipe) {
+      recipe.ingredients.forEach(ing => {
+        // We add the ingredient name to the shopping list
+        // Note: Quantity is not currently supported by addToList natively,
+        // so we just add the item name.
+        addToList(ing.name);
+      });
+      showToast('✅ Ingredienti aggiunti alla lista!');
+      closeDishDetail();
+    }
+  }
+}
+
 // ── INIT ──────────────────────────────────────────
 renderHome();
 renderCart();
 renderEsplora();
 renderProfile();
+renderCalendar();
 </script>
 </body>
 </html>
